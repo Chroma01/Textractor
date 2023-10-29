@@ -333,6 +333,10 @@ bool IllegalWideCharsFilter(LPVOID data, DWORD *size, HookParam *, BYTE)
 
 } // unnamed namespace
 
+#define XX2 XX,XX       // WORD
+#define XX4 XX2,XX2     // DWORD
+#define XX8 XX4,XX4     // QWORD
+
 namespace Engine
 {
 	enum : DWORD { X64_MAX_REL_ADDR = 0x00300000 };

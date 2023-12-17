@@ -520,24 +520,166 @@ namespace Engine
 				{
 					wcscpy_s(spDefault.exportModule, name);
 					HookParam hp = {};
-					hp.address = (DWORD)GetProcAddress(module, "PyUnicodeUCS2_Format");
+					hp.address = (uintptr_t)GetProcAddress(module, "PyUnicodeUCS2_Format");
 					if (!hp.address)
 					{
 						ConsoleOutput("Textractor: Ren'py failed: failed to find PyUnicodeUCS2_Format");
 						return false;
 					}
-					hp.offset = -0x20; // rcx
+					hp.offset = pusha_rcx_off -4; // rcx
 					hp.index = 0x18;
 					hp.length_offset = 0;
-					//hp.split = pusha_ebx_off - 4;
+					//hp.split = pusha_rsp_off -4;
 					hp.type = USING_STRING | USING_UNICODE | NO_CONTEXT | DATA_INDIRECT /* | USING_SPLIT*/;
-					//hp.filter_fun = [](void* str, auto, auto, auto) { return *(wchar_t*)str != L'%'; };
+					hp.filter_fun = [](LPVOID data, DWORD *size, HookParam *, BYTE)
+					{
+						static std::wstring prevText;
+						auto text = reinterpret_cast<LPWSTR>(data);
+						auto len = reinterpret_cast<size_t *>(size);
+
+						if (cpp_wcsnstr(text, L"%", *len/sizeof(wchar_t)))
+							return false;
+
+						if (cpp_wcsnstr(text, L"{", *len/sizeof(wchar_t))) {
+							WideStringCharReplacer(text, len, L"{i}", 3, L'\'');
+							WideStringCharReplacer(text, len, L"{/i}", 4, L'\'');
+							WideStringFilterBetween(text, len, L"{", 1, L"}", 1);
+						}
+						WideStringFilter(text, len, L"^", 2); // remove ^ followed by 1 char
+						WideCharReplacer(text, len, L'\n', L' ');
+
+						if (prevText.length()==*len/sizeof(wchar_t) && prevText.find(text, 0, *len/sizeof(wchar_t))!=std::string::npos) // Check if the string is the same as the previous one
+							return false;
+						prevText.assign(text, *len/sizeof(wchar_t));
+						
+						return true;
+					};
 					NewHook(hp, "Ren'py");
 					return true;
 				}
 			}
 		}
 		ConsoleOutput("Textractor: Ren'py failed: failed to find python2X.dll");
+		return false;
+	}
+	bool InsertRenpy3Hook()
+	{
+		//by Blu3train
+		/*
+		* Sample games:
+		* https://vndb.org/v45820
+		* https://vndb.org/v26318
+		* https://vndb.org/v39954
+		* https://vndb.org/r110220
+		* https://vndb.org/r114981
+		* https://vndb.org/v33647
+		* https://vndb.org/r73160
+		* https://vndb.org/v44518
+		* https://vndb.org/v31994
+		* https://vndb.org/r115756
+		*/
+		wchar_t python[] = L"python3X.dll", libpython[] = L"libpython3.X.dll";
+		for (wchar_t* name : { python, libpython })
+		{
+			wchar_t* pos = wcschr(name, L'X');
+			for (int pythonMinorVersion = 0; pythonMinorVersion <= 9; ++pythonMinorVersion)
+			{
+				*pos = L'0' + pythonMinorVersion;
+				if (HMODULE module = GetModuleHandleW(name))
+				{
+					wcscpy_s(spDefault.exportModule, name);
+					HookParam hp = {};
+					hp.address = (uintptr_t)GetProcAddress(module, "PyUnicode_Format");
+					if (!hp.address)
+					{
+						ConsoleOutput("Textractor: Ren'py 3 failed: failed to find PyUnicode_Format");
+						return false;
+					}
+					hp.offset = pusha_rcx_off -4; // rcx
+					hp.padding = 0x48;
+					hp.length_offset = 0;
+					hp.text_fun = [](DWORD rsp_base, HookParam *pHp, BYTE, DWORD* data, DWORD* split, DWORD* count)
+					{
+						uint64_t r10 = regof(r10, rsp_base);
+						uint64_t r11 = regof(r11, rsp_base);
+						if (r10==0x03FF || r11==0x03FF) {
+							uint64_t rcx = regof(rcx, rsp_base);
+							BYTE unicode = !(*(BYTE*)(rcx + 0x20) & 0x40); // [rcx+0x20) bit 0x40 == 0
+							if (unicode) {
+								*data += 0x48; //padding
+								*count = wcslen((wchar_t*)*data) * sizeof(wchar_t);
+								return;
+							}
+						}
+						*count = 0;
+					};
+					hp.type = USING_STRING | USING_UNICODE | NO_CONTEXT;
+					hp.filter_fun = [](LPVOID data, DWORD *size, HookParam *, BYTE)
+					{
+						auto text = reinterpret_cast<LPWSTR>(data);
+						auto len = reinterpret_cast<size_t *>(size);
+
+						if (cpp_wcsnstr(text, L"%", *len/sizeof(wchar_t)))
+							return false;
+						if (cpp_wcsnstr(text, L"{", *len/sizeof(wchar_t))) {
+							WideStringCharReplacer(text, len, L"{i}", 3, L'\'');
+							WideStringCharReplacer(text, len, L"{/i}", 4, L'\'');
+							WideStringFilterBetween(text, len, L"{", 1, L"}", 1);
+						}
+
+						//CP_OEMCP -The current system OEM code page
+						WideCharToMultiByte(CP_OEMCP, 0, text, -1, text_buffer, 0x1000, NULL, NULL);
+						text_buffer_length = *len/sizeof(wchar_t); // saved for not unicode hook
+						
+						return true;
+					};
+					NewHook(hp, "Ren'py 3 unicode");
+
+					hp.address += 6;
+					hp.padding = 0x30;
+					hp.text_fun = [](DWORD rsp_base, HookParam *pHp, BYTE, DWORD* data, DWORD* split, DWORD* count)
+					{
+						uint64_t r10 = regof(r10, rsp_base);
+						uint64_t r11 = regof(r11, rsp_base);
+						if (r10==0x03FF || r11==0x03FF) {
+							uint64_t rcx = regof(rcx, rsp_base);
+							BYTE unicode = !(*(BYTE*)(rcx + 0x20) & 0x40); // [rcx+0x20) bit 0x40 == 0
+
+							*data += unicode ? 0x48 : 0x30; //padding
+							*count = ::strlen((char*)*data);
+							if (!cpp_strnstr((char*)*data, "%", *count)) // not garbage
+								return;
+						}
+						*count = 0;
+					};
+					hp.type = USING_STRING | NO_CONTEXT;
+					hp.filter_fun = [](LPVOID data, DWORD *size, HookParam *, BYTE)
+					{
+						auto text = reinterpret_cast<LPSTR>(data);
+						auto len = reinterpret_cast<size_t *>(size);
+
+						if (text[0]!=0 && text[1]==0) {
+							// text from unicode hook
+							*len = text_buffer_length;
+							::memmove(text, text_buffer, *len);
+						}
+						if (cpp_strnstr(text, "%", *len))
+							return false;
+						if (cpp_strnstr(text, "{", *len)) {
+							StringCharReplacer(text, len, "{i}", 3, L'\'');
+							StringCharReplacer(text, len, "{/i}", 4, L'\'');
+							StringFilterBetween(text, len, "{", 1, "}", 1);
+						}
+
+						return true;
+					};
+					NewHook(hp, "Ren'py 3");
+
+					return true;
+				}
+			}
+		}
+		ConsoleOutput("Textractor: Ren'py 3 failed: failed to find python3X.dll");
 		return false;
 	}
 
@@ -592,7 +734,7 @@ namespace Engine
 			return true;
 		}
 
-		if (Util::CheckFile(L"*.py") && InsertRenpyHook()) return true;
+		if (Util::CheckFile(L"*.py") && InsertRenpyHook() || InsertRenpy3Hook()) return true;
 
 		for (const wchar_t* monoName : { L"mono.dll", L"mono-2.0-bdwgc.dll" }) if (HMODULE module = GetModuleHandleW(monoName)) if (InsertMonoHooks(module)) return true;
 

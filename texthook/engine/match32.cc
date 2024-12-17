@@ -54,6 +54,11 @@ bool DeterminePCEngine()
     return true;
   }
 
+  if (Util::CheckFile(L"script.dpk")) {
+      InsertDACHook();
+      return true;
+  }
+
   // jichi 5/14/2015: Skip hijacking BALDRSKY ZEROs
   //if (Util::CheckFile(L"bsz_Data\\Mono\\mono.dll") || Util::CheckFile(L"bsz2_Data\\Mono\\mono.dll")) {
   //  ConsoleOutput("vnreng: IGNORE BALDRSKY ZEROs");

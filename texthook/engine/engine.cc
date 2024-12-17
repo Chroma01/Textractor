@@ -27,6 +27,7 @@
 //#include <boost/foreach.hpp>
 #include <cstdio>
 #include <string>
+#include <sstream>
 
 // jichi 375/2014: Add offset of pusha/pushad
 // http://faydoc.tripod.com/cpu/pushad.htm
@@ -21026,6 +21027,84 @@ bool InsertTecmoPSPHook()
 }
 #endif // 0
 
+
+//for debug
+void StringBlockProcessor(char* str, size_t* size, size_t fixlength)
+{
+    size_t original_len = *size;
+    size_t new_len = 0;
+    char* new_str = new char[original_len + 1];
+
+    size_t i = 0;
+    while (i < original_len) {
+        size_t block_end = i + fixlength;
+        if (block_end > original_len) {
+            block_end = original_len;
+        }
+
+        size_t block_len = block_end - i;
+        char* block = str + i;
+
+        for (size_t j = 0; j < block_len; ++j) {
+            if (block[j] != 0) {
+                new_str[new_len++] = block[j];
+            }
+            else {
+                break;
+            }
+        }
+
+        i = block_end;
+    }
+
+    new_str[new_len] = '\0';
+
+    std::memcpy(str, new_str, new_len + 1);
+    *size = new_len;
+    delete[] new_str;
+}
+
+bool DACFilter(LPVOID data, DWORD* size, HookParam*, BYTE)
+{
+    auto text = reinterpret_cast<LPSTR>(data);
+    auto len = reinterpret_cast<size_t*>(size);
+
+    StringBlockProcessor(text, len, 0x3f);
+    return true;
+}
+
+bool InsertDACHook()
+{
+    const BYTE bytecodes[] = {
+        0x0F, 0xBF, 0x56, 0x34,       // movsx edx, word ptr ds:[esi+34]
+        0x83, 0xC2, 0x05,             // add edx, 5
+        0x8B, 0x8E, 0x00, 0x01, 0x00, 0x00, // mov ecx, dword ptr ds:[esi+100]
+        0x0F, 0xAF, 0xD3              // imul edx, ebx <--
+    };
+
+    ULONG addr = MemDbg::findBytes(bytecodes, sizeof(bytecodes), processStartAddress, processStopAddress);
+    if (addr == 0) {
+        ConsoleOutput("vnreng:DAC: pattern not found");
+        return false;
+    }
+    enum { addr_offset = 13 };
+
+    HookParam hp = {};
+    hp.type = USING_STRING; //S
+    hp.address = addr + addr_offset;
+    hp.offset = pusha_ecx_off - 4; //-C
+    hp.index = 0x00;
+    hp.filter_fun = DACFilter;
+    hp.length_fun = [](uintptr_t, uintptr_t data)
+    {
+        int len = 0x3f;
+        return len * 4;
+    };
+    NewHook(hp, "DAC");
+    ConsoleOutput("vnreng: INSERT DAC");
+    return true;
+}
+
 /** jichi 7/19/2014 PCSX2
  *  Tested wit  pcsx2-v1.2.1-328-gef0e3fe-windows-x86, built at http://buildbot.orphis.net/pcsx2
  */
@@ -21261,7 +21340,6 @@ bool InsertTypeMoonPS2Hook()
   ConsoleOutput("vnreng: TypeMoon PS2: leave");
   return addr;
 }
-
 /** 8/3/2014 jichi
  *  Tested game: School Rumble ねる娘�育つ
  *

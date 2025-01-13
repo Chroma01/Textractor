@@ -214,6 +214,37 @@ namespace Engine
 		return false;
 	}
 
+	bool InsertBGI64Hook()
+	{
+		bool found = false;
+		const BYTE pattern[] = {
+			0x48, 0x89, 0x54, 0x24, 0x10,   // mov qword ptr ss:[rsp+10], rdx
+			0x48, 0x89, 0x4C, 0x24, 0x08,   // mov qword ptr ss:[rsp+8], rcx
+			0x53,                           // push rbx
+			0x55,                           // push rbp
+			0x57,                           // push rdi
+			0x41, 0x55,                     // push r13
+			0x41, 0x56,                     // push r14
+			0x48, 0x81, 0xEC, 0x00, 0x01, 0x00, 0x00, // sub rsp, 100
+			0x8B, 0xAC, 0x24, 0x50, 0x01, 0x00, 0x00  // mov ebp, dword ptr ss:[rsp+150]
+		};
+
+
+		for (auto addr : Util::SearchMemory(pattern, sizeof(pattern), PAGE_EXECUTE, processStartAddress, processStopAddress))
+		{
+			HookParam hp = {};
+			hp.address = addr + 10;
+			hp.offset = 8;
+			hp.length_offset = 1;
+			hp.type = USING_UNICODE;
+			ConsoleOutput("Textractor: INSERT BGI64");
+			NewHook(hp, "BGI64");
+			found = true;
+		}
+		if (!found) ConsoleOutput("Textractor:BGI64: pattern not found");
+		return found;
+	}
+
 	bool UnsafeDetermineEngineType()
 	{
 		if (Util::CheckFile(L"PPSSPP*.exe") && FindPPSSPP()) return true;
@@ -225,6 +256,11 @@ namespace Engine
 			ConsoleOutput("Textractor: Precompiled Unity found (searching for hooks should work)");
 			wcscpy_s(spDefault.boundaryModule, L"GameAssembly.dll");
 			spDefault.padding = 20;
+			return true;
+		}
+
+		if (Util::CheckFile(L"bgi.*") || Util::CheckFile(L"sysgrp.arc")) {
+			InsertBGI64Hook();
 			return true;
 		}
 

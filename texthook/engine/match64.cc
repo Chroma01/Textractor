@@ -218,9 +218,9 @@ namespace Engine
 	{
 		bool found = false;
 		const BYTE pattern[] = {
-			0x48, 0x89, 0x54, 0x24, 0x10,   // mov qword ptr ss:[rsp+10], rdx
-			0x48, 0x89, 0x4C, 0x24, 0x08,   // mov qword ptr ss:[rsp+8], rcx
-			0x53,                           // push rbx
+			0x48, 0x89, 0x54, 0x24, 0x10,   // mov qword ptr ss:[rsp+10], rdx // split
+			0x48, 0x89, 0x4C, 0x24, 0x08,   // mov qword ptr ss:[rsp+8], rcx // char
+			0x53,                           // push rbx // <-- hook here
 			0x55,                           // push rbp
 			0x57,                           // push rdi
 			0x41, 0x55,                     // push r13
@@ -235,8 +235,9 @@ namespace Engine
 			HookParam hp = {};
 			hp.address = addr + 10;
 			hp.offset = 8;
+			hp.split = 0x10;
 			hp.length_offset = 1;
-			hp.type = USING_UNICODE;
+			hp.type = USING_UNICODE | USING_SPLIT;
 			ConsoleOutput("Textractor: INSERT BGI64");
 			NewHook(hp, "BGI64");
 			found = true;

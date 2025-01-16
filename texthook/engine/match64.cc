@@ -562,6 +562,7 @@ namespace Engine
 		ConsoleOutput("Textractor: Ren'py failed: failed to find python2X.dll");
 		return false;
 	}
+
 	bool InsertRenpy3Hook()
 	{
 		//by Blu3train
@@ -600,9 +601,10 @@ namespace Engine
 					hp.length_offset = 0;
 					hp.text_fun = [](DWORD rsp_base, HookParam *pHp, BYTE, DWORD* data, DWORD* split, DWORD* count)
 					{
+						uint64_t r8 = regof(r8, rsp_base);
 						uint64_t r10 = regof(r10, rsp_base);
 						uint64_t r11 = regof(r11, rsp_base);
-						if (r10==0x03FF || r11==0x03FF) {
+						if (r10==0x03FF || r11==0x03FF || (r8==r10 && r11==0x7F)) {
 							uint64_t rcx = regof(rcx, rsp_base);
 							BYTE unicode = !(*(BYTE*)(rcx + 0x20) & 0x40); // [rcx+0x20) bit 0x40 == 0
 							if (unicode) {
@@ -639,9 +641,10 @@ namespace Engine
 					hp.padding = 0x30;
 					hp.text_fun = [](DWORD rsp_base, HookParam *pHp, BYTE, DWORD* data, DWORD* split, DWORD* count)
 					{
+						uint64_t r8 = regof(r8, rsp_base);
 						uint64_t r10 = regof(r10, rsp_base);
 						uint64_t r11 = regof(r11, rsp_base);
-						if (r10==0x03FF || r11==0x03FF) {
+						if (r10 == 0x03FF || r11 == 0x03FF || (r8 == r10 && r11 == 0x7F)) {
 							uint64_t rcx = regof(rcx, rsp_base);
 							BYTE unicode = !(*(BYTE*)(rcx + 0x20) & 0x40); // [rcx+0x20) bit 0x40 == 0
 
@@ -680,6 +683,52 @@ namespace Engine
 			}
 		}
 		ConsoleOutput("Textractor: Ren'py 3 failed: failed to find python3X.dll");
+		return false;
+	}
+
+	bool InsertRenpy3NewHook()
+	{
+		//by Chenx221
+		/* Tested:
+		* https://vndb.org/v50148 (renpy 8.3.3)
+		*/
+		wchar_t python[] = L"python3X.dll", libpython[] = L"libpython3.X.dll";
+		for (wchar_t* name : { python, libpython })
+		{
+			wchar_t* pos = wcschr(name, L'X');
+			for (int pythonMinorVersion = 0; pythonMinorVersion <= 9; ++pythonMinorVersion)
+			{
+				*pos = L'0' + pythonMinorVersion;
+				if (HMODULE module = GetModuleHandleW(name))
+				{
+					wcscpy_s(spDefault.exportModule, name);
+					HookParam hp = {};
+					hp.address = (uintptr_t)GetProcAddress(module, "_PyUnicodeWriter_WriteStr");
+					if (!hp.address)
+					{
+						ConsoleOutput("Textractor: Ren'py 3 New failed: failed to find _PyUnicodeWriter_WriteStr");
+						return false;
+					}
+					hp.offset = pusha_rdi_off - 4; // rdi
+					hp.length_offset = 0;
+					hp.text_fun = [](DWORD rsp_base, HookParam* pHp, BYTE, DWORD* data, DWORD* split, DWORD* count)
+					{
+						uint64_t r11 = regof(r11, rsp_base);
+						if (r11 == 0x7F) {
+							*count = wcslen((wchar_t*)*data) * sizeof(wchar_t);
+							return;
+						}
+						*count = 0;
+					};
+					hp.type = USING_STRING | USING_UNICODE | NO_CONTEXT;
+					NewHook(hp, "Ren'py 3 New unicode");
+					// Q. Why is non-Unicode not supported? 
+					// A. Check _PyUnicodeWriter_WriteStr
+					return true;
+				}
+			}
+		}
+		ConsoleOutput("Textractor: Ren'py 3 New failed: failed to find python3X.dll");
 		return false;
 	}
 
@@ -734,7 +783,12 @@ namespace Engine
 			return true;
 		}
 
-		if (Util::CheckFile(L"*.py") && InsertRenpyHook() || InsertRenpy3Hook()) return true;
+		if (Util::CheckFile(L"*.py")) { 
+			InsertRenpyHook();
+			InsertRenpy3Hook();
+			InsertRenpy3NewHook();
+			return true; 
+		}
 
 		for (const wchar_t* monoName : { L"mono.dll", L"mono-2.0-bdwgc.dll" }) if (HMODULE module = GetModuleHandleW(monoName)) if (InsertMonoHooks(module)) return true;
 

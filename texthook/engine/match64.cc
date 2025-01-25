@@ -19,15 +19,15 @@ enum pusha_off
 	pusha_rbp_off = -0x34,
 	pusha_rsi_off = -0x3c,
 	pusha_rdi_off = -0x44,
-	pusha_r8_off  = -0x4c,
-	pusha_r9_off  = -0x54,
+	pusha_r8_off = -0x4c,
+	pusha_r9_off = -0x54,
 	pusha_r10_off = -0x5c,
 	pusha_r11_off = -0x64,
 	pusha_r12_off = -0x6c,
 	pusha_r13_off = -0x74,
 	pusha_r14_off = -0x7c,
 	pusha_r15_off = -0x84,
-	pusha_off     = -0x8c // pushad offset
+	pusha_off = -0x8c // pushad offset
 };
 
 #define retof(rsp_base)         *(uintptr_t *)(rsp_base) // return address
@@ -46,290 +46,290 @@ namespace { // unnamed helpers
 //enum { MAX_REL_ADDR = 0x200000 };
 
 // jichi 10/1/2013: Increase relative address limit. Certain game engine like Artemis has larger code region
-enum : DWORD { MAX_REL_ADDR = 0x00300000 };
+	enum : DWORD { MAX_REL_ADDR = 0x00300000 };
 
-static union {
-  char text_buffer[0x1000];
-  wchar_t wc_buffer[0x800];
+	static union {
+		char text_buffer[0x1000];
+		wchar_t wc_buffer[0x800];
 
-  struct { // CodeSection
-    DWORD base;
-    DWORD size;
-  } code_section[0x200];
-};
-DWORD text_buffer_length;
+		struct { // CodeSection
+			DWORD base;
+			DWORD size;
+		} code_section[0x200];
+	};
+	DWORD text_buffer_length;
 
-// 7/29/2014 jichi: I should move these functions to different files
-// String utilities
-// Return the address of the first non-zero address
-LPCSTR reverse_search_begin(const char *s, int maxsize = VNR_TEXT_CAPACITY)
-{
-  if (*s)
-    for (int i = 0; i < maxsize; i++, s--)
-      if (!*s)
-        return s + 1;
-  return nullptr;
-}
+	// 7/29/2014 jichi: I should move these functions to different files
+	// String utilities
+	// Return the address of the first non-zero address
+	LPCSTR reverse_search_begin(const char* s, int maxsize = VNR_TEXT_CAPACITY)
+	{
+		if (*s)
+			for (int i = 0; i < maxsize; i++, s--)
+				if (!*s)
+					return s + 1;
+		return nullptr;
+	}
 
-bool all_ascii(const char *s, int maxsize = VNR_TEXT_CAPACITY)
-{
-  if (s)
-    for (int i = 0; i < maxsize && *s; i++, s++)
-      if ((BYTE)*s > 127) // unsigned char
-        return false;
-  return true;
-}
+	bool all_ascii(const char* s, int maxsize = VNR_TEXT_CAPACITY)
+	{
+		if (s)
+			for (int i = 0; i < maxsize && *s; i++, s++)
+				if ((BYTE)*s > 127) // unsigned char
+					return false;
+		return true;
+	}
 
-bool all_ascii(const wchar_t *s, int maxsize = VNR_TEXT_CAPACITY)
-{
-  if (s)
-    for (int i = 0; i < maxsize && *s; i++, s++)
-      if (*s > 127) // unsigned char
-        return false;
-  return true;
-}
+	bool all_ascii(const wchar_t* s, int maxsize = VNR_TEXT_CAPACITY)
+	{
+		if (s)
+			for (int i = 0; i < maxsize && *s; i++, s++)
+				if (*s > 127) // unsigned char
+					return false;
+		return true;
+	}
 
-// String filters
+	// String filters
 
-void CharReplacer(char *str, size_t *size, char fr, char to)
-{
-  size_t len = *size;
-  for (size_t i = 0; i < len; i++)
-    if (str[i] == fr)
-      str[i] = to;
-}
+	void CharReplacer(char* str, size_t* size, char fr, char to)
+	{
+		size_t len = *size;
+		for (size_t i = 0; i < len; i++)
+			if (str[i] == fr)
+				str[i] = to;
+	}
 
-void WideCharReplacer(wchar_t *str, size_t *size, wchar_t fr, wchar_t to)
-{
-  size_t len = *size / 2;
-  for (size_t i = 0; i < len; i++)
-    if (str[i] == fr)
-      str[i] = to;
-}
+	void WideCharReplacer(wchar_t* str, size_t* size, wchar_t fr, wchar_t to)
+	{
+		size_t len = *size / 2;
+		for (size_t i = 0; i < len; i++)
+			if (str[i] == fr)
+				str[i] = to;
+	}
 
-void CharFilter(char *str, size_t *size, char ch)
-{
-  size_t len = *size,
-         curlen;
-  for (char *cur = (char *)::memchr(str, ch, len);
-       (cur && --len && (curlen = len - (cur - str)));
-       cur = (char *)::memchr(cur, ch, curlen))
-    ::memmove(cur, cur + 1, curlen);
-  *size = len;
-}
+	void CharFilter(char* str, size_t* size, char ch)
+	{
+		size_t len = *size,
+			curlen;
+		for (char* cur = (char*)::memchr(str, ch, len);
+			(cur && --len && (curlen = len - (cur - str)));
+			cur = (char*)::memchr(cur, ch, curlen))
+			::memmove(cur, cur + 1, curlen);
+		*size = len;
+	}
 
-void WideCharFilter(wchar_t *str, size_t *size, wchar_t ch)
-{
-  size_t len = *size / 2,
-         curlen;
-  for (wchar_t *cur = cpp_wcsnchr(str, ch, len);
-       (cur && --len && (curlen = len - (cur - str)));
-       cur = cpp_wcsnchr(cur, ch, curlen))
-    ::memmove(cur, cur + 1, 2 * curlen);
-  *size = len * 2;
-}
+	void WideCharFilter(wchar_t* str, size_t* size, wchar_t ch)
+	{
+		size_t len = *size / 2,
+			curlen;
+		for (wchar_t* cur = cpp_wcsnchr(str, ch, len);
+			(cur && --len && (curlen = len - (cur - str)));
+			cur = cpp_wcsnchr(cur, ch, curlen))
+			::memmove(cur, cur + 1, 2 * curlen);
+		*size = len * 2;
+	}
 
-void CharsFilter(char *str, size_t *size, const char *chars)
-{
-  size_t len = *size,
-         curlen;
-  for (char *cur = cpp_strnpbrk(str, chars, len);
-       (cur && --len && (curlen = len - (cur - str)));
-       cur = cpp_strnpbrk(cur, chars, curlen))
-    ::memmove(cur, cur + 1, curlen);
-  *size = len;
-}
+	void CharsFilter(char* str, size_t* size, const char* chars)
+	{
+		size_t len = *size,
+			curlen;
+		for (char* cur = cpp_strnpbrk(str, chars, len);
+			(cur && --len && (curlen = len - (cur - str)));
+			cur = cpp_strnpbrk(cur, chars, curlen))
+			::memmove(cur, cur + 1, curlen);
+		*size = len;
+	}
 
-void WideCharsFilter(wchar_t *str, size_t *size, const wchar_t *chars)
-{
-  size_t len = *size / 2,
-         curlen;
-  for (wchar_t *cur = cpp_wcsnpbrk(str, chars, len);
-       (cur && --len && (curlen = len - (cur - str)));
-       cur = cpp_wcsnpbrk(cur, chars, curlen))
-    ::memmove(cur, cur + 1, 2 * curlen);
-  *size = len * 2;
-}
+	void WideCharsFilter(wchar_t* str, size_t* size, const wchar_t* chars)
+	{
+		size_t len = *size / 2,
+			curlen;
+		for (wchar_t* cur = cpp_wcsnpbrk(str, chars, len);
+			(cur && --len && (curlen = len - (cur - str)));
+			cur = cpp_wcsnpbrk(cur, chars, curlen))
+			::memmove(cur, cur + 1, 2 * curlen);
+		*size = len * 2;
+	}
 
-void StringFilter(char *str, size_t *size, const char *remove, size_t removelen)
-{
-  size_t len = *size,
-         curlen;
-  for (char *cur = cpp_strnstr(str, remove, len);
-       (cur && (len -= removelen) && (curlen = len - (cur - str)));
-       cur = cpp_strnstr(cur, remove, curlen))
-    ::memmove(cur, cur + removelen, curlen);
-  *size = len;
-}
+	void StringFilter(char* str, size_t* size, const char* remove, size_t removelen)
+	{
+		size_t len = *size,
+			curlen;
+		for (char* cur = cpp_strnstr(str, remove, len);
+			(cur && (len -= removelen) && (curlen = len - (cur - str)));
+			cur = cpp_strnstr(cur, remove, curlen))
+			::memmove(cur, cur + removelen, curlen);
+		*size = len;
+	}
 
-void WideStringFilter(wchar_t *str, size_t *size, const wchar_t *remove, size_t removelen)
-{
-  size_t len = *size / 2,
-         curlen;
-  for (wchar_t *cur = cpp_wcsnstr(str, remove, len);
-       (cur && (len -= removelen) && (curlen = len - (cur - str)));
-       cur = cpp_wcsnstr(cur, remove, curlen))
-    ::memmove(cur, cur + removelen, 2 * curlen);
-  *size = len * 2;
-}
+	void WideStringFilter(wchar_t* str, size_t* size, const wchar_t* remove, size_t removelen)
+	{
+		size_t len = *size / 2,
+			curlen;
+		for (wchar_t* cur = cpp_wcsnstr(str, remove, len);
+			(cur && (len -= removelen) && (curlen = len - (cur - str)));
+			cur = cpp_wcsnstr(cur, remove, curlen))
+			::memmove(cur, cur + removelen, 2 * curlen);
+		*size = len * 2;
+	}
 
-void StringFilterBetween(char *str, size_t *size, const char *fr, size_t frlen, const char *to, size_t tolen)
-{
-  size_t len = *size,
-         curlen;
-  for (char *cur = cpp_strnstr(str, fr, len);
-       cur;
-       cur = cpp_strnstr(cur, fr, curlen)) {
-    curlen = (len - frlen) - (cur - str);
-    auto end = cpp_strnstr(cur + frlen, to, curlen);
-    if (!end)
-      break;
-    curlen = len - (end - str) - tolen;
-    ::memmove(cur, end + tolen, curlen);
-    len -= tolen + (end - cur);
-  }
-  *size = len;
-}
+	void StringFilterBetween(char* str, size_t* size, const char* fr, size_t frlen, const char* to, size_t tolen)
+	{
+		size_t len = *size,
+			curlen;
+		for (char* cur = cpp_strnstr(str, fr, len);
+			cur;
+			cur = cpp_strnstr(cur, fr, curlen)) {
+			curlen = (len - frlen) - (cur - str);
+			auto end = cpp_strnstr(cur + frlen, to, curlen);
+			if (!end)
+				break;
+			curlen = len - (end - str) - tolen;
+			::memmove(cur, end + tolen, curlen);
+			len -= tolen + (end - cur);
+		}
+		*size = len;
+	}
 
-void WideStringFilterBetween(wchar_t *str, size_t *size, const wchar_t *fr, size_t frlen, const wchar_t *to, size_t tolen)
-{
-  size_t len = *size / 2,
-         curlen;
-  for (wchar_t *cur = cpp_wcsnstr(str, fr, len);
-       cur;
-       cur = cpp_wcsnstr(cur, fr, curlen)) {
-    curlen = (len - frlen) - (cur - str);
-    auto end = cpp_wcsnstr(cur + frlen, to, curlen);
-    if (!end)
-      break;
-    curlen = len - (end - str) - tolen;
-    ::memmove(cur, end + tolen, 2 * curlen);
-    len -= tolen + (end - cur);
-  }
-  *size = len * 2;
-}
+	void WideStringFilterBetween(wchar_t* str, size_t* size, const wchar_t* fr, size_t frlen, const wchar_t* to, size_t tolen)
+	{
+		size_t len = *size / 2,
+			curlen;
+		for (wchar_t* cur = cpp_wcsnstr(str, fr, len);
+			cur;
+			cur = cpp_wcsnstr(cur, fr, curlen)) {
+			curlen = (len - frlen) - (cur - str);
+			auto end = cpp_wcsnstr(cur + frlen, to, curlen);
+			if (!end)
+				break;
+			curlen = len - (end - str) - tolen;
+			::memmove(cur, end + tolen, 2 * curlen);
+			len -= tolen + (end - cur);
+		}
+		*size = len * 2;
+	}
 
-void StringCharReplacer(char *str, size_t *size, const char *src, size_t srclen, char ch)
-{
-  size_t len = *size,
-         curlen;
-  for (char *cur = cpp_strnstr(str, src, len);
-       cur && len;
-       cur = cpp_strnstr(cur, src, curlen)) {
-    *cur++ = ch;
-    len -= srclen - 1;
-    curlen = len - (cur - str);
-    if (curlen == 0)
-      break;
-    ::memmove(cur, cur + srclen - 1, curlen);
-  }
-  *size = len;
-}
+	void StringCharReplacer(char* str, size_t* size, const char* src, size_t srclen, char ch)
+	{
+		size_t len = *size,
+			curlen;
+		for (char* cur = cpp_strnstr(str, src, len);
+			cur && len;
+			cur = cpp_strnstr(cur, src, curlen)) {
+			*cur++ = ch;
+			len -= srclen - 1;
+			curlen = len - (cur - str);
+			if (curlen == 0)
+				break;
+			::memmove(cur, cur + srclen - 1, curlen);
+		}
+		*size = len;
+	}
 
-void WideStringCharReplacer(wchar_t *str, size_t *size, const wchar_t *src, size_t srclen, wchar_t ch)
-{
-  size_t len = *size / 2,
-         curlen;
-  for (wchar_t *cur = cpp_wcsnstr(str, src, len);
-       cur && len;
-       cur = cpp_wcsnstr(cur, src, curlen)) {
-    *cur++ = ch;
-    len -= srclen - 1;
-    curlen = len - (cur - str);
-    if (curlen == 0)
-      break;
-    ::memmove(cur, cur + srclen -1, 2 * curlen);
-  }
-  *size = len * 2;
-}
+	void WideStringCharReplacer(wchar_t* str, size_t* size, const wchar_t* src, size_t srclen, wchar_t ch)
+	{
+		size_t len = *size / 2,
+			curlen;
+		for (wchar_t* cur = cpp_wcsnstr(str, src, len);
+			cur && len;
+			cur = cpp_wcsnstr(cur, src, curlen)) {
+			*cur++ = ch;
+			len -= srclen - 1;
+			curlen = len - (cur - str);
+			if (curlen == 0)
+				break;
+			::memmove(cur, cur + srclen - 1, 2 * curlen);
+		}
+		*size = len * 2;
+	}
 
-// NOTE: I assume srclen >= dstlen
-void StringReplacer(char *str, size_t *size, const char *src, size_t srclen, const char *dst, size_t dstlen)
-{
-  size_t len = *size,
-         curlen;
-  for (char *cur = cpp_strnstr(str, src, len);
-       cur && len;
-       cur = cpp_strnstr(cur, src, curlen)) {
-    ::memcpy(cur, dst, dstlen);
-    cur += dstlen;
-    len -= srclen - dstlen;
-    curlen = len - (cur - str);
-    if (curlen == 0)
-      break;
-    if (srclen > dstlen)
-      ::memmove(cur, cur + srclen - dstlen, curlen);
-  }
-  *size = len;
-}
+	// NOTE: I assume srclen >= dstlen
+	void StringReplacer(char* str, size_t* size, const char* src, size_t srclen, const char* dst, size_t dstlen)
+	{
+		size_t len = *size,
+			curlen;
+		for (char* cur = cpp_strnstr(str, src, len);
+			cur && len;
+			cur = cpp_strnstr(cur, src, curlen)) {
+			::memcpy(cur, dst, dstlen);
+			cur += dstlen;
+			len -= srclen - dstlen;
+			curlen = len - (cur - str);
+			if (curlen == 0)
+				break;
+			if (srclen > dstlen)
+				::memmove(cur, cur + srclen - dstlen, curlen);
+		}
+		*size = len;
+	}
 
-void WideStringReplacer(wchar_t *str, size_t *size, const wchar_t *src, size_t srclen, const wchar_t *dst, size_t dstlen)
-{
-  size_t len = *size / 2,
-         curlen;
-  for (wchar_t *cur = cpp_wcsnstr(str, src, len);
-       cur && len;
-       cur = cpp_wcsnstr(cur, src, curlen)) {
-    ::memcpy(cur, dst, 2 * dstlen);
-    cur += dstlen;
-    len -= srclen - dstlen;
-    curlen = len - (cur - str);
-    if (curlen == 0)
-      break;
-    if (srclen > dstlen)
-      ::memmove(cur, cur + srclen - dstlen, 2 * curlen);
-  }
-  *size = len * 2;
-}
+	void WideStringReplacer(wchar_t* str, size_t* size, const wchar_t* src, size_t srclen, const wchar_t* dst, size_t dstlen)
+	{
+		size_t len = *size / 2,
+			curlen;
+		for (wchar_t* cur = cpp_wcsnstr(str, src, len);
+			cur && len;
+			cur = cpp_wcsnstr(cur, src, curlen)) {
+			::memcpy(cur, dst, 2 * dstlen);
+			cur += dstlen;
+			len -= srclen - dstlen;
+			curlen = len - (cur - str);
+			if (curlen == 0)
+				break;
+			if (srclen > dstlen)
+				::memmove(cur, cur + srclen - dstlen, 2 * curlen);
+		}
+		*size = len * 2;
+	}
 
-bool NewLineCharFilter(LPVOID data, DWORD *size, HookParam *, BYTE)
-{
-  CharFilter(reinterpret_cast<LPSTR>(data), reinterpret_cast<size_t *>(size),
-      '\n');
-  return true;
-}
-bool NewLineWideCharFilter(LPVOID data, DWORD *size, HookParam *, BYTE)
-{
-  CharFilter(reinterpret_cast<LPSTR>(data), reinterpret_cast<size_t *>(size),
-      L'\n');
-  return true;
-}
-bool NewLineStringFilter(LPVOID data, DWORD *size, HookParam *, BYTE)
-{
-  StringFilter(reinterpret_cast<LPSTR>(data), reinterpret_cast<size_t *>(size),
-      "\\n", 2);
-  return true;
-}
-bool NewLineWideStringFilter(LPVOID data, DWORD *size, HookParam *, BYTE)
-{
-  WideStringFilter(reinterpret_cast<LPWSTR>(data), reinterpret_cast<size_t *>(size),
-      L"\\n", 2);
-  return true;
-}
-bool NewLineCharToSpaceFilter(LPVOID data, DWORD *size, HookParam *, BYTE)
-{
-  CharReplacer(reinterpret_cast<LPSTR>(data), reinterpret_cast<size_t *>(size), '\n', ' ');
-  return true;
-}
-bool NewLineWideCharToSpaceFilter(LPVOID data, DWORD *size, HookParam *, BYTE)
-{
-  WideCharReplacer(reinterpret_cast<LPWSTR>(data), reinterpret_cast<size_t *>(size), L'\n', L' ');
-  return true;
-}
+	bool NewLineCharFilter(LPVOID data, DWORD* size, HookParam*, BYTE)
+	{
+		CharFilter(reinterpret_cast<LPSTR>(data), reinterpret_cast<size_t*>(size),
+			'\n');
+		return true;
+	}
+	bool NewLineWideCharFilter(LPVOID data, DWORD* size, HookParam*, BYTE)
+	{
+		CharFilter(reinterpret_cast<LPSTR>(data), reinterpret_cast<size_t*>(size),
+			L'\n');
+		return true;
+	}
+	bool NewLineStringFilter(LPVOID data, DWORD* size, HookParam*, BYTE)
+	{
+		StringFilter(reinterpret_cast<LPSTR>(data), reinterpret_cast<size_t*>(size),
+			"\\n", 2);
+		return true;
+	}
+	bool NewLineWideStringFilter(LPVOID data, DWORD* size, HookParam*, BYTE)
+	{
+		WideStringFilter(reinterpret_cast<LPWSTR>(data), reinterpret_cast<size_t*>(size),
+			L"\\n", 2);
+		return true;
+	}
+	bool NewLineCharToSpaceFilter(LPVOID data, DWORD* size, HookParam*, BYTE)
+	{
+		CharReplacer(reinterpret_cast<LPSTR>(data), reinterpret_cast<size_t*>(size), '\n', ' ');
+		return true;
+	}
+	bool NewLineWideCharToSpaceFilter(LPVOID data, DWORD* size, HookParam*, BYTE)
+	{
+		WideCharReplacer(reinterpret_cast<LPWSTR>(data), reinterpret_cast<size_t*>(size), L'\n', L' ');
+		return true;
+	}
 
-// Remove every characters <= 0x1f (i.e. before space ' ') except 0xa and 0xd.
-bool IllegalCharsFilter(LPVOID data, DWORD *size, HookParam *, BYTE)
-{
-  CharsFilter(reinterpret_cast<LPSTR>(data), reinterpret_cast<size_t *>(size),
-      "\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0b\x0c\x0e\x0f\x10\x11\x12\x12\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f");
-  return true;
-}
-bool IllegalWideCharsFilter(LPVOID data, DWORD *size, HookParam *, BYTE)
-{
-  WideCharsFilter(reinterpret_cast<LPWSTR>(data), reinterpret_cast<size_t *>(size),
-      L"\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0b\x0c\x0e\x0f\x10\x11\x12\x12\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f");
-  return true;
-}
+	// Remove every characters <= 0x1f (i.e. before space ' ') except 0xa and 0xd.
+	bool IllegalCharsFilter(LPVOID data, DWORD* size, HookParam*, BYTE)
+	{
+		CharsFilter(reinterpret_cast<LPSTR>(data), reinterpret_cast<size_t*>(size),
+			"\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0b\x0c\x0e\x0f\x10\x11\x12\x12\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f");
+		return true;
+	}
+	bool IllegalWideCharsFilter(LPVOID data, DWORD* size, HookParam*, BYTE)
+	{
+		WideCharsFilter(reinterpret_cast<LPWSTR>(data), reinterpret_cast<size_t*>(size),
+			L"\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0b\x0c\x0e\x0f\x10\x11\x12\x12\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f");
+		return true;
+	}
 
 } // unnamed namespace
 
@@ -405,9 +405,9 @@ namespace Engine
 		*/
 		trigger_fun = [](LPVOID addr, DWORD, DWORD)
 		{
-			static auto getDomain = (MonoDomain*(*)())GetProcAddress(mono, "mono_domain_get");
-			static auto getJitInfo = (MonoObject*(*)(MonoDomain*, uintptr_t))GetProcAddress(mono, "mono_jit_info_table_find");
-			static auto getName = (char*(*)(uintptr_t))GetProcAddress(mono, "mono_pmip");
+			static auto getDomain = (MonoDomain * (*)())GetProcAddress(mono, "mono_domain_get");
+			static auto getJitInfo = (MonoObject * (*)(MonoDomain*, uintptr_t))GetProcAddress(mono, "mono_jit_info_table_find");
+			static auto getName = (char* (*)(uintptr_t))GetProcAddress(mono, "mono_pmip");
 			if (!getDomain || !getName || !getJitInfo) goto failed;
 			static auto domain = getDomain();
 			if (!domain) goto failed;
@@ -415,40 +415,40 @@ namespace Engine
 			const BYTE prolog1[] = { 0x55, 0x48, 0x8b, 0xec };
 			const BYTE prolog2[] = { 0x48, 0x83, 0xec };
 			for (auto [prolog, size] : Array<const BYTE*, size_t>{ { prolog1, sizeof(prolog1) }, { prolog2, sizeof(prolog2) } })
-			for (auto addr : Util::SearchMemory(prolog, size, PAGE_EXECUTE_READWRITE))
-			{
-				[](uint64_t addr)
+				for (auto addr : Util::SearchMemory(prolog, size, PAGE_EXECUTE_READWRITE))
 				{
-					__try
+					[](uint64_t addr)
 					{
-						if (getJitInfo(domain, addr))
-							if (char* name = getName(addr))
-								if (strstr(name, "0x0") && ShouldMonoHook(name))
-								{
-									HookParam hp = {};
-									hp.address = addr;
-									hp.type = USING_STRING | USING_UNICODE | FULL_STRING;
-									if (!*loadedConfig) hp.type |= KNOWN_UNSTABLE;
-									hp.offset = -0x20; // rcx
-									hp.padding = 20;
-									char nameForUser[HOOK_NAME_SIZE] = {};
-									strncpy_s(nameForUser, name + 1, HOOK_NAME_SIZE - 1);
-									if (char* end = strstr(nameForUser, " + 0x0")) *end = 0;
-									if (char* end = strstr(nameForUser, "{")) *end = 0;
-									hp.length_fun = [](uintptr_t, uintptr_t data)
+						__try
+						{
+							if (getJitInfo(domain, addr))
+								if (char* name = getName(addr))
+									if (strstr(name, "0x0") && ShouldMonoHook(name))
 									{
-										/* Artikash 6/18/2019:
-										even though this should get the true length mono uses internally
-										there's still some garbage picked up on https://vndb.org/v20403 demo, don't know why */
-										int len = *(int*)(data - 4);
-										return len > 0 && len < PIPE_BUFFER_SIZE ? len * 2 : 0;
-									};
-									NewHook(hp, nameForUser);
-								}
-					}
-					__except (EXCEPTION_EXECUTE_HANDLER) {}
-				}(addr);
-			}
+										HookParam hp = {};
+										hp.address = addr;
+										hp.type = USING_STRING | USING_UNICODE | FULL_STRING;
+										if (!*loadedConfig) hp.type |= KNOWN_UNSTABLE;
+										hp.offset = -0x20; // rcx
+										hp.padding = 20;
+										char nameForUser[HOOK_NAME_SIZE] = {};
+										strncpy_s(nameForUser, name + 1, HOOK_NAME_SIZE - 1);
+										if (char* end = strstr(nameForUser, " + 0x0")) *end = 0;
+										if (char* end = strstr(nameForUser, "{")) *end = 0;
+										hp.length_fun = [](uintptr_t, uintptr_t data)
+										{
+											/* Artikash 6/18/2019:
+											even though this should get the true length mono uses internally
+											there's still some garbage picked up on https://vndb.org/v20403 demo, don't know why */
+											int len = *(int*)(data - 4);
+											return len > 0 && len < PIPE_BUFFER_SIZE ? len * 2 : 0;
+										};
+										NewHook(hp, nameForUser);
+									}
+						}
+						__except (EXCEPTION_EXECUTE_HANDLER) {}
+					}(addr);
+				}
 
 			if (!*loadedConfig) ConsoleOutput("Textractor: Mono Dynamic used brute force: if performance issues arise, please specify the correct hook in the game configuration");
 			return true;
@@ -463,7 +463,7 @@ namespace Engine
 	// sample game https://www.freem.ne.jp/dl/win/18963
 	bool InsertV8Hook(HMODULE module)
 	{
-		auto getV8Length =  [](uintptr_t, uintptr_t data)
+		auto getV8Length = [](uintptr_t, uintptr_t data)
 		{
 			int len = *(int*)(data - 4);
 			return len > 0 && len < PIPE_BUFFER_SIZE ? len * 2 : 0;
@@ -530,21 +530,21 @@ namespace Engine
 						ConsoleOutput("Textractor: Ren'py failed: failed to find PyUnicodeUCS2_Format");
 						return false;
 					}
-					hp.offset = pusha_rcx_off -4; // rcx
+					hp.offset = pusha_rcx_off - 4; // rcx
 					hp.index = 0x18;
 					hp.length_offset = 0;
 					//hp.split = pusha_rsp_off -4;
 					hp.type = USING_STRING | USING_UNICODE | NO_CONTEXT | DATA_INDIRECT /* | USING_SPLIT*/;
-					hp.filter_fun = [](LPVOID data, DWORD *size, HookParam *, BYTE)
+					hp.filter_fun = [](LPVOID data, DWORD* size, HookParam*, BYTE)
 					{
 						static std::wstring prevText;
 						auto text = reinterpret_cast<LPWSTR>(data);
-						auto len = reinterpret_cast<size_t *>(size);
+						auto len = reinterpret_cast<size_t*>(size);
 
-						if (cpp_wcsnstr(text, L"%", *len/sizeof(wchar_t)))
+						if (cpp_wcsnstr(text, L"%", *len / sizeof(wchar_t)))
 							return false;
 
-						if (cpp_wcsnstr(text, L"{", *len/sizeof(wchar_t))) {
+						if (cpp_wcsnstr(text, L"{", *len / sizeof(wchar_t))) {
 							WideStringCharReplacer(text, len, L"{i}", 3, L'\'');
 							WideStringCharReplacer(text, len, L"{/i}", 4, L'\'');
 							WideStringFilterBetween(text, len, L"{", 1, L"}", 1);
@@ -552,10 +552,10 @@ namespace Engine
 						WideStringFilter(text, len, L"^", 2); // remove ^ followed by 1 char
 						WideCharReplacer(text, len, L'\n', L' ');
 
-						if (prevText.length()==*len/sizeof(wchar_t) && prevText.find(text, 0, *len/sizeof(wchar_t))!=std::string::npos) // Check if the string is the same as the previous one
+						if (prevText.length() == *len / sizeof(wchar_t) && prevText.find(text, 0, *len / sizeof(wchar_t)) != std::string::npos) // Check if the string is the same as the previous one
 							return false;
-						prevText.assign(text, *len/sizeof(wchar_t));
-						
+						prevText.assign(text, *len / sizeof(wchar_t));
+
 						return true;
 					};
 					NewHook(hp, "Ren'py");
@@ -585,9 +585,35 @@ namespace Engine
 		for (auto addr : Util::SearchMemory(bytes, sizeof(bytes), PAGE_EXECUTE, processStartAddress, processStartAddress + range)) {
 			HookParam hp = {};
 			hp.address = addr + 1;
-			hp.offset = -0x44 -4; //RDI
+			hp.offset = -0x44 - 4; //RDI
 			hp.type = USING_STRING | USING_UTF8 | NO_CONTEXT;
 			ConsoleOutput("vnreng: INSERT Artemis Hook ");
+			NewHook(hp, "Artemis");
+			return true;
+		}
+
+		// For newer Artemis x64 engine
+		// By Chenx221
+		/*
+			Sample games :
+			https://vndb.org/v54502
+			https://vndb.org/v50081
+			https://vndb.org/v33348
+		*/
+		const BYTE bytes2[] = {
+			0xCC,                               // int3
+			0x48, 0x89, 0x5C, 0x24, 0x08,       // mov qword ptr ss:[rsp+8],rbx
+			0x48, 0x89, 0x74, 0x24, 0x10,       // mov qword ptr ss:[rsp+10],rsi
+			0x57,                               // push rdi                     <- hook here
+			0x48, 0x83, 0xEC, 0x30,             // sub rsp,30
+			0x49, 0x8B, 0xD8                    // mov rbx,r8
+		};
+		for (auto addr : Util::SearchMemory(bytes2, sizeof(bytes2), PAGE_EXECUTE, processStartAddress, processStartAddress + range)) {
+			HookParam hp = {};
+			hp.address = addr + 0xB;
+			hp.offset = pusha_rdi_off - 4; //RDI
+			hp.type = USING_STRING | USING_UTF8 | NO_CONTEXT;
+			ConsoleOutput("vnreng: INSERT Artemis New Hook ");
 			NewHook(hp, "Artemis");
 			return true;
 		}
@@ -629,15 +655,15 @@ namespace Engine
 						ConsoleOutput("Textractor: Ren'py 3 failed: failed to find PyUnicode_Format");
 						return false;
 					}
-					hp.offset = pusha_rcx_off -4; // rcx
+					hp.offset = pusha_rcx_off - 4; // rcx
 					hp.padding = 0x48;
 					hp.length_offset = 0;
-					hp.text_fun = [](DWORD rsp_base, HookParam *pHp, BYTE, DWORD* data, DWORD* split, DWORD* count)
+					hp.text_fun = [](DWORD rsp_base, HookParam* pHp, BYTE, DWORD* data, DWORD* split, DWORD* count)
 					{
 						uint64_t r8 = regof(r8, rsp_base);
 						uint64_t r10 = regof(r10, rsp_base);
 						uint64_t r11 = regof(r11, rsp_base);
-						if (r10==0x03FF || r11==0x03FF || (r8==r10 && r11==0x7F)) {
+						if (r10 == 0x03FF || r11 == 0x03FF || (r8 == r10 && r11 == 0x7F)) {
 							uint64_t rcx = regof(rcx, rsp_base);
 							BYTE unicode = !(*(BYTE*)(rcx + 0x20) & 0x40); // [rcx+0x20) bit 0x40 == 0
 							if (unicode) {
@@ -649,14 +675,14 @@ namespace Engine
 						*count = 0;
 					};
 					hp.type = USING_STRING | USING_UNICODE | NO_CONTEXT;
-					hp.filter_fun = [](LPVOID data, DWORD *size, HookParam *, BYTE)
+					hp.filter_fun = [](LPVOID data, DWORD* size, HookParam*, BYTE)
 					{
 						auto text = reinterpret_cast<LPWSTR>(data);
-						auto len = reinterpret_cast<size_t *>(size);
+						auto len = reinterpret_cast<size_t*>(size);
 
-						if (cpp_wcsnstr(text, L"%", *len/sizeof(wchar_t)))
+						if (cpp_wcsnstr(text, L"%", *len / sizeof(wchar_t)))
 							return false;
-						if (cpp_wcsnstr(text, L"{", *len/sizeof(wchar_t))) {
+						if (cpp_wcsnstr(text, L"{", *len / sizeof(wchar_t))) {
 							WideStringCharReplacer(text, len, L"{i}", 3, L'\'');
 							WideStringCharReplacer(text, len, L"{/i}", 4, L'\'');
 							WideStringFilterBetween(text, len, L"{", 1, L"}", 1);
@@ -664,15 +690,15 @@ namespace Engine
 
 						//CP_OEMCP -The current system OEM code page
 						WideCharToMultiByte(CP_OEMCP, 0, text, -1, text_buffer, 0x1000, NULL, NULL);
-						text_buffer_length = *len/sizeof(wchar_t); // saved for not unicode hook
-						
+						text_buffer_length = *len / sizeof(wchar_t); // saved for not unicode hook
+
 						return true;
 					};
 					NewHook(hp, "Ren'py 3 unicode");
 
 					hp.address += 6;
 					hp.padding = 0x30;
-					hp.text_fun = [](DWORD rsp_base, HookParam *pHp, BYTE, DWORD* data, DWORD* split, DWORD* count)
+					hp.text_fun = [](DWORD rsp_base, HookParam* pHp, BYTE, DWORD* data, DWORD* split, DWORD* count)
 					{
 						uint64_t r8 = regof(r8, rsp_base);
 						uint64_t r10 = regof(r10, rsp_base);
@@ -689,12 +715,12 @@ namespace Engine
 						*count = 0;
 					};
 					hp.type = USING_STRING | NO_CONTEXT;
-					hp.filter_fun = [](LPVOID data, DWORD *size, HookParam *, BYTE)
+					hp.filter_fun = [](LPVOID data, DWORD* size, HookParam*, BYTE)
 					{
 						auto text = reinterpret_cast<LPSTR>(data);
-						auto len = reinterpret_cast<size_t *>(size);
+						auto len = reinterpret_cast<size_t*>(size);
 
-						if (text[0]!=0 && text[1]==0) {
+						if (text[0] != 0 && text[1] == 0) {
 							// text from unicode hook
 							*len = text_buffer_length;
 							::memmove(text, text_buffer, *len);
@@ -821,11 +847,11 @@ namespace Engine
 			return true;
 		}
 
-		if (Util::CheckFile(L"*.py")) { 
+		if (Util::CheckFile(L"*.py")) {
 			InsertRenpyHook();
 			InsertRenpy3Hook();
 			InsertRenpy3NewHook();
-			return true; 
+			return true;
 		}
 
 		for (const wchar_t* monoName : { L"mono.dll", L"mono-2.0-bdwgc.dll" }) if (HMODULE module = GetModuleHandleW(monoName)) if (InsertMonoHooks(module)) return true;

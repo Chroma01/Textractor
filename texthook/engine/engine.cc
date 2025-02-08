@@ -22141,6 +22141,46 @@ bool InsertDebonosuWorksHook() {
 	return true;
 }
 
+bool InsertDebonosuWorksNewHook() {
+    //by Chenx221
+    /*
+    * Sample games:
+    * https://vndb.org/v51959
+    * https://vndb.org/v53823
+    */
+    const BYTE bytes[] = {
+        0x55,                                       // push ebp      <-- hook here
+        0x8B, 0xEC,                                 // mov ebp,esp
+        0x6A, 0xFF,                                 // push FFFFFFFF
+        0x68, XX4,                                  // push [souseiki_2.74E676]
+        0x64, 0xA1, 0x00, 0x00, 0x00, 0x00,         // mov eax,dword ptr fs:[0]
+        0x50,                                       // push eax
+        0x64, 0x89, 0x25, 0x00, 0x00, 0x00, 0x00,   // mov dword ptr fs:[0],esp
+        0x83, 0xEC, 0x2C,                           // sub esp,2C
+        0x53,                                       // push ebx
+        0x56,                                       // push esi
+        0x57,                                       // push edi
+        0x8B, 0xF9,                                 // mov edi,ecx
+        0x33, 0xC0,                                 // xor eax,eax
+        0x89, 0x7D, 0xE0                            // mov dword ptr ss:[ebp-20],edi
+    };
+    ULONG addr = MemDbg::findBytes(bytes, sizeof(bytes), processStartAddress, processStopAddress);
+    if (!addr) {
+        ConsoleOutput("vnreng:DebonosuWorksNew: pattern not found");
+        return false;
+    }
+
+    HookParam hp = {};
+    hp.address = addr;
+    hp.offset = pusha_eax_off - 4;
+    hp.index = 0;
+    hp.type = USING_STRING | USING_UNICODE;
+    ConsoleOutput("vnreng: INSERT DebonosuWorksNew");
+    NewHook(hp, "DebonosuWorksNew");
+
+    return true;
+}
+
 } // namespace Engine
 
 // EOF

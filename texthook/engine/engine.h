@@ -98,6 +98,8 @@ bool InsertCMVSHook();          // CMVS: data/pack/*.cpz; do not support the lat
 bool InsertCotophaHook();       // Cotopha: *.noa
 bool InsertDACHook();           // DAC
 bool InsertDebonosuHook();      // Debonosu: bmp.bak and dsetup.dll
+bool InsertDebonosuWorksNewHook();  // Debonosu (new version)
+
 bool InsertEaglsHook();         // E.A.G.L.S: EAGLES.dll
 bool InsertEMEHook();           // EmonEngine: emecfg.ecf
 bool InsertEscudeHook();        // Escude

@@ -375,8 +375,8 @@ bool DetermineEngineByFile3()
 
 bool DetermineEngineByFile4()
 {
-  if (Util::SearchResourceString(L"でぼの巣製作所")) {
-    if (InsertDebonosuWorksHook())
+  if (Util::SearchResourceString(L"でぼの巣製作所") || Util::SearchResourceString(L"Debonosu Works")) {
+    if (InsertDebonosuWorksHook() || InsertDebonosuWorksNewHook())
       return true;
   }
   if (Util::CheckFile(L"EAGLS.dll")) { // jichi 3/24/2014: E.A.G.L.S

@@ -432,7 +432,10 @@ std::pair<bool, std::wstring> Translate(const std::wstring& text, TranslationPar
 		L"Host: translate-pa.googleapis.com\r\nX-Goog-API-Key: AIzaSyATBXajvzQLTDHEQbcpq0Ihe0vWDHmO520\r\nContent-Type: application/json+protobuf"
 		})
 	{
-		if (auto translation = Copy(JSON::Parse(httpRequest.response)[0][0].String()))
+		auto a = JSON::Parse(httpRequest.response)[0][0];
+		auto strValue = a.String();
+		std::wstring unescapedString = HTML::Unescape(*strValue);
+		if (auto translation = Copy(JSON::Value<wchar_t>(unescapedString).String()))
 			return { true, translation.value() };
 		else
 			return { false, FormatString(L"%s: %s", TRANSLATION_ERROR, httpRequest.response) };

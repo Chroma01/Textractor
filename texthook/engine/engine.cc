@@ -6700,12 +6700,15 @@ bool InsertCotophaHook4()
     0x56,                         // push esi
     0x57,                         // push edi
     0x8B, 0x7D, 0x08,             // mov edi,[ebp+08]
-    0x33, 0xF6                    // xor esi,esi
+    0x33, 0xF6,                   // xor esi,esi
+    0x8B, 0xD9,                   // mov ebx,ecx
+    0x85, 0xFF,                   // test edi,edi
+    0x74, 0x0D                    // je xxx
   };
 
   if (ULONG procAddr = (ULONG)GetProcAddress(GetModuleHandleW(NULL), "glsGetEnabledProcessorType")) {
-    ULONG range = min(processStopAddress - procAddr, MAX_REL_ADDR);
-    ULONG addr = MemDbg::findBytes(bytes, sizeof(bytes), procAddr, procAddr + range);
+    ULONG range = min(processStopAddress - processStartAddress, MAX_REL_ADDR);
+    ULONG addr = MemDbg::findBytes(bytes, sizeof(bytes), processStartAddress, processStartAddress + range);
     if (!addr) {
       ConsoleOutput("vnreng:Cotopha4: pattern not found");
       return false;

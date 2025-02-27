@@ -612,9 +612,63 @@ namespace Engine
 			HookParam hp = {};
 			hp.address = addr + 0xB;
 			hp.offset = pusha_rdi_off - 4; //RDI
-			hp.type = USING_STRING | USING_UTF8 | NO_CONTEXT;
-			ConsoleOutput("vnreng: INSERT Artemis New Hook ");
+			hp.type = USING_STRING | USING_UTF8; // | NO_CONTEXT;
+			ConsoleOutput("vnreng: INSERT Artemis New Hook");
 			NewHook(hp, "Artemis");
+			return true;
+		}
+
+		ConsoleOutput("vnreng:Artemis: pattern not found");
+		return false;
+	}
+
+	bool InsertArtemisExHook() {
+		const BYTE bytes[] = {
+			0xCC,                               // int 3
+			0x48, 0x89, 0x5C, 0x24, 0x20,       // mov qword ptr ss:[rsp+20],rbx	// hook here RDX
+			0x55,								// push rbp
+			0x56,								// push rsi   
+			0x57,								// push rdi
+			0x41, 0x54,							// push r12
+			0x41, 0x55,							// push r13
+			0x41, 0x56,							// push r14
+			0x41, 0x57,							// push r15
+			0x48, 0x83, 0xEC, 0x60				// sub rsp,60
+		};
+
+		ULONG64 range = min(processStopAddress - processStartAddress, X64_MAX_REL_ADDR);
+		for (auto addr : Util::SearchMemory(bytes, sizeof(bytes), PAGE_EXECUTE, processStartAddress, processStartAddress + range)) {
+			HookParam hp = {};
+			hp.address = addr + 1;
+			hp.offset = -0x24 - 4; //RDI
+			hp.type = USING_STRING | USING_UTF8;
+			ConsoleOutput("vnreng: INSERT ArtemisEx Hook ");
+			NewHook(hp, "ArtemisEx");
+			return true;
+		}
+
+		// For newer Artemis x64 engine
+		// By Chenx221
+		//CC 48 89 5C 24 20 55 56 57 41 54 41 55 41 56 41 57 48 8B EC
+		const BYTE bytes2[] = {
+			0xCC,                               // int3
+			0x48, 0x89, 0x5C, 0x24, 0x20,		// mov qword ptr ss:[rsp+0x20], rbx // hook here RDX
+			0x55,								// push rbp
+			0x56,								// push rsi
+			0x57,								// push rdi
+			0x41, 0x54,							// push r12
+			0x41, 0x55,							// push r13
+			0x41, 0x56,							// push r14
+			0x41, 0x57,							// push r15
+			0x48, 0x8B, 0xEC					// mov rbp, rsp
+		};
+		for (auto addr : Util::SearchMemory(bytes2, sizeof(bytes2), PAGE_EXECUTE, processStartAddress, processStartAddress + range)) {
+			HookParam hp = {};
+			hp.address = addr + 0x1;
+			hp.offset = pusha_rdx_off - 4; //RDI
+			hp.type = USING_STRING | USING_UTF8; // | NO_CONTEXT;
+			ConsoleOutput("vnreng: INSERT ArtemisEx New Hook ");
+			NewHook(hp, "ArtemisEx");
 			return true;
 		}
 
@@ -839,6 +893,7 @@ namespace Engine
 
 		if (Util::CheckFile(L"*.pfs")) {
 			InsertArtemisHook();
+			InsertArtemisExHook();
 			return true;
 		}
 

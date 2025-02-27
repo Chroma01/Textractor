@@ -11268,13 +11268,111 @@ bool InsertArtemis3EngHook()
 }
 
 bool InsertArtemis3Hooks() {
-  bool ok = InsertArtemis3Hook();
-  ok = InsertArtemis3EngHook() || ok;
-  return ok;
+    bool ok = InsertArtemis3Hook();
+    ok = InsertArtemis3EngHook() || ok;
+    return ok;
+}
+
+bool InsertArtemis4ExHook()
+{
+    // By Chenx221
+    // It's quite rare to see new games using the Artemis engine x86 in 2025.
+    /*
+        Tested:
+        https://vndb.org/r132529
+    */
+
+    const BYTE bytes[] = {
+        0xCC,                               // CC                    | int3
+        0x55,                               // 55                    | push ebp                      | <-- EDI
+        0x8B, 0xEC,                         // 8BEC                  | mov ebp,esp
+        0x6A, 0xFF,                         // 6A FF                 | push FFFFFFFF
+        0x68, XX, XX, XX, XX,               // 68 17086700           | push bonusfd1.670817
+        0x64, 0xA1, 0x00, 0x00, 0x00, 0x00, // 64:A1 00000000        | mov eax,dword ptr fs:[0]
+        0x50,                               // 50                    | push eax
+        0x51,                               // 51                    | push ecx
+        0x56,                               // 56                    | push esi
+        0xA1, XX, XX, XX, XX,               // A1 40707E00           | mov eax,dword ptr ds:[7E7040]
+        0x33, 0xC5,                         // 33C5                  | xor eax,ebp
+        0x50,                               // 50                    | push eax
+        0x8D, 0x45, 0xF4,                   // 8D45 F4               | lea eax,dword ptr ss:[ebp-C]
+        0x64, 0xA3, 0x00, 0x00, 0x00, 0x00, // 64:A3 00000000        | mov dword ptr fs:[0],eax
+        0x8B, 0xF1,                         // 8BF1                  | mov esi,ecx
+        0x68, 0xC4, 0x00, 0x00, 0x00        // 68 C4000000           | push C4
+    };
+
+
+    enum { addr_offset = 1 };
+    ULONG range = min(processStopAddress - processStartAddress, MAX_REL_ADDR);
+    ULONG addr = MemDbg::findBytes(bytes, sizeof(bytes), processStartAddress, processStartAddress + range);
+    if (!addr) {
+        ConsoleOutput("Textractor:Artemis4Ex: pattern not found");
+        return false;
+    }
+    addr += addr_offset;
+
+    HookParam hp = {};
+    hp.address = addr;
+    hp.offset = pusha_edi_off - 4;
+    hp.type = USING_STRING | USING_UTF8;
+
+    ConsoleOutput("Textractor: INSERT Artemis4Ex");
+    NewHook(hp, "Artemis4Ex");
+
+    return true;
+}
+
+bool InsertArtemis4Hook()
+{
+    // By Chenx221
+    // It's quite rare to see new games using the Artemis engine x86 in 2025.
+    /*
+        Tested:
+        https://vndb.org/r132529
+    */
+
+    const BYTE bytes[] = {
+        0x55,                           // 55                    | push ebp
+        0x8B, 0xEC,                     // 8BEC                  | mov ebp,esp
+        0x83, 0xE4, 0xF0,               // 83E4 F0               | and esp,FFFFFFF0
+        0x83, 0xEC, 0x68,               // 83EC 68               | sub esp,68
+        0xA1, XX, XX, XX, XX,           // A1 40707E00           | mov eax,dword ptr ds:[7E7040] (007E7040: "09袊")
+        0x33, 0xC4,                     // 33C4                  | xor eax,esp
+        0x89, 0x44, 0x24, 0x64,         // 894424 64             | mov dword ptr ss:[esp+64],eax
+        0x56,                           // 56                    | push esi
+        0x8B, 0x75, 0x08,               // 8B75 08               | mov esi,dword ptr ss:[ebp+8]
+        0x8B, 0xC1                      // 8BC1                  | mov eax,ecx                                      | <--ESI
+    };
+    enum { addr_offset = 0x18 };
+    ULONG range = min(processStopAddress - processStartAddress, MAX_REL_ADDR);
+    ULONG addr = MemDbg::findBytes(bytes, sizeof(bytes), processStartAddress, processStartAddress + range);
+    if (!addr) {
+        ConsoleOutput("Textractor:Artemis4: pattern not found");
+        return false;
+    }
+    addr += addr_offset;
+
+    HookParam hp = {};
+    hp.address = addr;
+    hp.offset = pusha_esi_off - 4;
+    hp.type = USING_STRING | USING_UTF8;
+
+    ConsoleOutput("Textractor: INSERT Artemis4");
+    NewHook(hp, "Artemis4");
+
+    return true;
+}
+
+bool InsertArtemis4Hooks() {
+    bool ok = InsertArtemis4Hook();
+    ok = InsertArtemis4ExHook() || ok;
+    return ok;
 }
 
 bool InsertArtemisHook()
-{ return InsertArtemis1Hook() ||  InsertArtemis2Hooks() || InsertArtemis3Hooks(); }
+{
+    return InsertArtemis1Hook() || InsertArtemis2Hooks() || InsertArtemis3Hooks() || InsertArtemis4Hooks();
+}
 
 /**
  *  jichi 1/2/2014: Taskforce2 Engine

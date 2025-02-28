@@ -282,6 +282,14 @@ namespace { // unnamed helpers
 		*size = len * 2;
 	}
 
+	void RegexReplacer(char* str, size_t* size, const std::regex& pattern, const std::string& replacement) {
+		std::string s(str, *size);
+		s = std::regex_replace(s, pattern, replacement);
+		*size = s.size();
+		std::memcpy(str, s.c_str(), *size);
+		str[*size] = '\0';
+	}
+
 	bool NewLineCharFilter(LPVOID data, DWORD* size, HookParam*, BYTE)
 	{
 		CharFilter(reinterpret_cast<LPSTR>(data), reinterpret_cast<size_t*>(size),
@@ -871,6 +879,41 @@ namespace Engine
 			hp.type = USING_UNICODE | USING_SPLIT;
 			ConsoleOutput("Textractor: INSERT BGI64");
 			NewHook(hp, "BGI64");
+			found = true;
+		}
+
+		const BYTE pattern2[] = {
+			0x40, 0x53,						// push rbx							// RBP
+			0x48, 0x8B, 0x44, 0x24, 0x38,	// mov rax,qword ptr ss:[rsp+38]
+			0x45, 0x8B, 0xD1,				// mov r10d,r9d 
+			0x4C, 0x8B, 0x4C, 0x24, 0x30,	// mov r9,qword ptr ss:[rsp+30]
+			0x45, 0x8B, 0xD8,				// mov r11d,r8d
+			0x48, 0x8B, 0xCA,				// mov rcx,rdx
+			0x48, 0x89, 0x44, 0x24, 0x30,	// mov qword ptr ss:[rsp+30],rax
+			0x45, 0x8B, 0xC2,				// mov r8d,r10d
+			0x41, 0x8B, 0xD3,				// mov edx,r11d
+			0x5B							// pop rbx
+		};
+
+		for (auto addr : Util::SearchMemory(pattern2, sizeof(pattern2), PAGE_EXECUTE, processStartAddress, processStopAddress))
+		{
+			HookParam hp = {};
+			hp.address = addr;
+			hp.offset = pusha_rbp_off - 4;
+			hp.type = USING_UTF8 | USING_STRING;
+			hp.filter_fun = [](void* str, DWORD* size, HookParam* hp, BYTE index) { // REGEX Filter: <r.*?>|<\/r>
+				if (*size < 1)
+					return false;
+				auto text = reinterpret_cast<char*>(str);
+				size_t len = *size;
+
+				std::regex pattern(R"(<r.*?>|<\/r>)");
+				RegexReplacer(text, &len, pattern, "");
+				*size = len;
+				return true;
+			};
+			ConsoleOutput("Textractor: INSERT BGI64Ex");
+			NewHook(hp, "BGI64Ex");
 			found = true;
 		}
 		if (!found) ConsoleOutput("Textractor:BGI64: pattern not found");

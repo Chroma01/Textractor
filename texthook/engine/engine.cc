@@ -5901,6 +5901,9 @@ bool Waffle3Filter(LPVOID data, DWORD *size, HookParam *, BYTE)
 	if (bs > text && !IsSJIS(text)) // garbage text
       return false;
 
+  if (cpp_strnstr(text, "_", *len) && !IsSJIS(text) || strcmp(text, "bright") == 0)
+      return false;
+
   if (prevText.find(text, 0, *len) != std::string::npos) // Check if the string is present in the previous one
     return false;
   prevText.assign(text, *len);
@@ -6045,24 +6048,28 @@ bool InsertWaffleHook()
   }
   //by Blu3train
 /** new waffle3
-*   test on https://vndb.org/v31003
+*   test on https://vndb.org/v31003 & https://vndb.org/v50008
 */
   const BYTE bytes2[] = {
-      0xCC,                     // int 3 
+      //0xCC,                     // int 3 
       0x55,                     // push ebp     <- hook here
       0x8B, 0xEC,               // mov ebp,esp
       0x8B, 0x55, 0x0C,         // mov edx,[ebp+0C]
-      0x53                      // push ebx
+      0x53,                      // push ebx
+      0x56,                     // push esi
+      0x57,                     // push edi
+      0x8B, 0x7D, 0x18          // mov edi, dword ptr ss:[ebp+0x18]
   };
   ULONG range = min(processStopAddress - processStartAddress, MAX_REL_ADDR);
   if (DWORD addr = MemDbg::findBytes(bytes2, sizeof(bytes2), processStartAddress, processStartAddress + range))
   {
       HookParam hp = {};
-      hp.address = addr + 1;
+      hp.address = addr;
       hp.offset = pusha_eax_off - 4;
       hp.index = 0x00;
       hp.filter_fun = Waffle3Filter;
-      hp.type = USING_STRING;
+      hp.type = USING_STRING | USING_SPLIT;
+      hp.split = pusha_ebp_off-4; // ecx okay?
       ConsoleOutput("Textractor: INSERT WAFFLE3");
       NewHook(hp, "WAFFLE3");
       found = true;

@@ -780,21 +780,21 @@ namespace Engine
 					hp.filter_fun = [](LPVOID data, DWORD* size, HookParam*, BYTE)
 					{
 						auto text = reinterpret_cast<LPSTR>(data);
-						auto len = reinterpret_cast<size_t*>(size);
+						size_t len = static_cast<size_t>(*size);
 
 						if (text[0] != 0 && text[1] == 0) {
 							// text from unicode hook
-							*len = text_buffer_length;
-							::memmove(text, text_buffer, *len);
+							len = text_buffer_length;
+							::memmove(text, text_buffer, len);
 						}
-						if (cpp_strnstr(text, "%", *len))
+						if (cpp_strnstr(text, "%", len))
 							return false;
-						if (cpp_strnstr(text, "{", *len)) {
-							StringCharReplacer(text, len, "{i}", 3, L'\'');
-							StringCharReplacer(text, len, "{/i}", 4, L'\'');
-							StringFilterBetween(text, len, "{", 1, "}", 1);
+						if (cpp_strnstr(text, "{", len)) {
+							StringCharReplacer(text, &len, "{i}", 3, L'\'');
+							StringCharReplacer(text, &len, "{/i}", 4, L'\'');
+							StringFilterBetween(text, &len, "{", 1, "}", 1);
 						}
-
+						*size = static_cast<DWORD>(len);
 						return true;
 					};
 					NewHook(hp, "Ren'py 3");

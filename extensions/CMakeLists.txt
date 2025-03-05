@@ -1,6 +1,7 @@
 cmake_policy(SET CMP0037 OLD)
 
 add_library(Bing\ Translate MODULE bingtranslate.cpp translatewrapper.cpp network.cpp extensionimpl.cpp)
+add_library(Bing\ Translate2 MODULE bingtranslate2.cpp translatewrapper.cpp network.cpp extensionimpl.cpp)
 add_library(Copy\ to\ Clipboard MODULE copyclipboard.cpp extensionimpl.cpp)
 add_library(DeepL\ Translate MODULE deepltranslate.cpp translatewrapper.cpp network.cpp extensionimpl.cpp)
 add_library(DevTools\ DeepL\ Translate MODULE devtoolsdeepltranslate.cpp devtools.cpp translatewrapper.cpp network.cpp extensionimpl.cpp)
@@ -21,6 +22,7 @@ add_library(Styler MODULE styler.cpp extensionimpl.cpp)
 add_library(Thread\ Linker MODULE threadlinker.cpp extensionimpl.cpp)
 
 target_precompile_headers(Bing\ Translate REUSE_FROM pch)
+target_precompile_headers(Bing\ Translate2 REUSE_FROM pch)
 target_precompile_headers(Copy\ to\ Clipboard REUSE_FROM pch)
 target_precompile_headers(DeepL\ Translate REUSE_FROM pch)
 target_precompile_headers(DevTools\ DeepL\ Translate REUSE_FROM pch)
@@ -41,6 +43,7 @@ target_precompile_headers(Styler REUSE_FROM pch)
 target_precompile_headers(Thread\ Linker REUSE_FROM pch)
 
 target_link_libraries(Bing\ Translate winhttp Qt5::Widgets)
+target_link_libraries(Bing\ Translate2 winhttp Qt5::Widgets)
 target_link_libraries(DeepL\ Translate winhttp Qt5::Widgets)
 target_link_libraries(DevTools\ DeepL\ Translate shell32 winhttp Qt5::Widgets Qt5::WebSockets)
 target_link_libraries(DevTools\ Papago\ Translate shell32 winhttp Qt5::Widgets Qt5::WebSockets)

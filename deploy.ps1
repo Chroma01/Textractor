@@ -42,6 +42,7 @@ foreach ($language in @{
 		}
 		foreach ($extension in @(
 			"Bing Translate",
+			"Bing Translate2",
 			"Copy to Clipboard",
 			"DeepL Translate",
 			"DevTools DeepL Translate",

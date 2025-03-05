@@ -4,7 +4,7 @@
 
 extern const wchar_t* TRANSLATION_ERROR;
 
-const char* TRANSLATION_PROVIDER = "Bing Translate";
+const char* TRANSLATION_PROVIDER = "Bing Translate2";
 const char* GET_API_KEY_FROM = "https://www.microsoft.com/en-us/translator/business/trial/#get-started";
 extern const QStringList languagesTo
 {
@@ -287,6 +287,13 @@ extern const std::unordered_map<std::wstring, std::wstring> codes
 bool translateSelectedOnly = false, useRateLimiter = true, rateLimitSelected = false, useCache = true, useFilter = true;
 int tokenCount = 30, rateLimitTimespan = 60000, maxSentenceSize = 1000;
 
+static std::atomic<long long> tokenFetchTime = 0;
+
+bool isTokenExpired() {
+	long long currentTime = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+	return tokenFetchTime + 9 * 60 <= currentTime;
+}
+
 std::pair<bool, std::wstring> Translate(const std::wstring& text, TranslationParam tlp)
 {
 	if (!tlp.authKey.empty())
@@ -307,27 +314,30 @@ std::pair<bool, std::wstring> Translate(const std::wstring& text, TranslationPar
 
 	static std::atomic<int> i = 0;
 	static Synchronized<std::wstring> token;
-	if (token->empty()) if (HttpRequest httpRequest{ L"Mozilla/5.0 Textractor", L"www.bing.com", L"GET", L"translator" })
+	if (token->empty() || isTokenExpired()) if (HttpRequest httpRequest{ L"Mozilla/5.0 Textractor", L"edge.microsoft.com", L"GET", L"/translate/auth" }) // Edge browser: ???
 	{
-		std::wstring tokenBuilder;
-		if (auto tokenPos = httpRequest.response.find(L"[" + std::to_wstring(time(nullptr) / 100)); tokenPos != std::string::npos)
-			tokenBuilder = FormatString(L"&key=%s&token=%s", httpRequest.response.substr(tokenPos + 1, 13), httpRequest.response.substr(tokenPos + 16, 32));
-		if (auto tokenPos = httpRequest.response.find(L"IG:\""); tokenPos != std::string::npos)
-			tokenBuilder += L"&IG=" + httpRequest.response.substr(tokenPos + 4, 32);
-		if (auto tokenPos = httpRequest.response.find(L"data-iid=\""); tokenPos != std::string::npos)
-			tokenBuilder += L"&IID=" + httpRequest.response.substr(tokenPos + 10, 15);
-		if (!tokenBuilder.empty()) token->assign(tokenBuilder);
-		else return { false, FormatString(L"%s: %s\ntoken not found", TRANSLATION_ERROR, httpRequest.response) };
+		if (!httpRequest.response.empty()) {
+			token->assign(httpRequest.response);
+			tokenFetchTime = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+		}
+		else {
+			return { false, FormatString(L"%s: token response is empty", TRANSLATION_ERROR) };
+		}
 	}
-	else return { false, FormatString(L"%s: could not acquire token", TRANSLATION_ERROR) };
+	else {
+		return { false, FormatString(L"%s: could not acquire token", TRANSLATION_ERROR) };
+	}
 
+	std::wstring translateFromComponent = tlp.translateFrom == L"?" ? L"" : L"&from=" + codes.at(tlp.translateFrom);
 	if (HttpRequest httpRequest{
 		L"Mozilla/5.0 Textractor",
-		L"www.bing.com",
+		L"api.cognitive.microsofttranslator.com",
 		L"POST",
-		FormatString(L"/ttranslatev3?fromLang=%s&to=%s&text=%s%s.%d", codes.at(tlp.translateFrom), codes.at(tlp.translateTo), Escape(text), token.Copy(), i++).c_str()
+		FormatString(L"/translate?api-version=3.0&to=%s%s", codes.at(tlp.translateTo), translateFromComponent).c_str(),
+		FormatString(R"([{"text":"%s"}])", JSON::Escape(WideStringToString(text))),
+		FormatString(L"Content-Type: application/json; charset=UTF-8\r\nAuthorization: Bearer %s", token.Copy()).c_str()
 	})
 		if (auto translation = Copy(JSON::Parse(httpRequest.response)[0][L"translations"][0][L"text"].String())) return { true, translation.value() };
-		else return { false, FormatString(L"%s (token=%s): %s", TRANSLATION_ERROR, std::exchange(token.Acquire().contents, L""), httpRequest.response) };
+		else return { false, FormatString(L"%s: %s", TRANSLATION_ERROR, httpRequest.response) };
 	else return { false, FormatString(L"%s (code=%u)", TRANSLATION_ERROR, httpRequest.errorCode) };
 }

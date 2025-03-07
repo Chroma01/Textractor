@@ -247,9 +247,21 @@ private:
 	{
 		if (sentenceHistory.empty()) return;
 		QString sentence = sentenceHistory[historyIndex];
-		if (sentence.contains(u8"\x200b \n"))
-			if (!showOriginal) sentence = sentence.split(u8"\x200b \n")[1];
-			else if (showOriginalAfterTranslation) sentence = sentence.split(u8"\x200b \n")[1] + "\n" + sentence.split(u8"\x200b \n")[0];
+		if (sentence.contains(u8"\x200b \n")) {
+			QStringList parts = sentence.split(u8"\x200b \n");
+			QString temp;
+			if (!showOriginal)
+				for (int i = 1; i < parts.size(); ++i)
+					temp.append(parts[i] + "\n");
+			else if (showOriginalAfterTranslation) {
+				for (int i = 1; i < parts.size(); ++i)
+					temp.append(parts[i] + "\n");
+				temp.append(parts[0]);
+			}else
+				temp = sentence;
+			sentence = temp;
+		}
+
 
 		if (sizeLock && !autoResize)
 		{

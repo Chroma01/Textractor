@@ -150,6 +150,21 @@ private:
 	}
 } window;
 
+std::vector<std::wstring> splitWString(const std::wstring& sentence, const std::wstring& delimiter) {
+	std::vector<std::wstring> result;
+	size_t start = 0;
+	size_t end = sentence.find(delimiter);
+
+	while (end != std::wstring::npos) {
+		result.push_back(sentence.substr(start, end - start));
+		start = end + delimiter.length();
+		end = sentence.find(delimiter, start);
+	}
+
+	result.push_back(sentence.substr(start));
+	return result;
+}
+
 bool ProcessSentence(std::wstring& sentence, SentenceInfo sentenceInfo)
 {
 	if (sentenceInfo["text number"] == 0) return false;
@@ -189,7 +204,7 @@ bool ProcessSentence(std::wstring& sentence, SentenceInfo sentenceInfo)
 		if (auto it = translationCache->find(sentence); it != translationCache->end()) translation = it->second;
 	}
 	if (translation.empty() && (!translateSelectedOnly || sentenceInfo["current select"]))
-		if (rateLimiter.Request() || !useRateLimiter || (!rateLimitSelected && sentenceInfo["current select"])) std::tie(cache, translation) = Translate(sentence, tlp.Copy());
+		if (rateLimiter.Request() || !useRateLimiter || (!rateLimitSelected && sentenceInfo["current select"])) std::tie(cache, translation) = Translate(splitWString(sentence,L"\x200b \n")[0], tlp.Copy());
 		else translation = TOO_MANY_TRANS_REQUESTS;
 	if (cache) translationCache->operator[](sentence) = translation;
 

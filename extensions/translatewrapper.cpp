@@ -165,54 +165,60 @@ std::vector<std::wstring> splitWString(const std::wstring& sentence, const std::
 	return result;
 }
 
-bool ProcessSentence(std::wstring& sentence, SentenceInfo sentenceInfo)
-{
-	if (sentenceInfo["text number"] == 0) return false;
+bool ProcessSentence(std::wstring &sentence, SentenceInfo sentenceInfo) {
+    if (sentenceInfo["text number"] == 0) return false; // not processing the sentence from console
 
-	static class
-	{
-	public:
-		bool Request()
-		{
-			DWORD64 current = GetTickCount64(), token;
-			while (tokens.try_pop(token)) if (token > current - rateLimitTimespan)
-			{
-				tokens.push(token); // popped one too many
-				break;
-			}
-			bool available = tokens.size() < tokenCount;
-			if (available) tokens.push(current);
-			return available;
-		}
+    static class {
+    public:
+        bool Request() {
+            DWORD64 current = GetTickCount64(), token;
+            while (tokens.try_pop(token))
+                if (token > current - rateLimitTimespan) {
+                    tokens.push(token); // popped one too many
+                    break;
+                }
+            bool available = tokens.size() < tokenCount;
+            if (available) tokens.push(current);
+            return available;
+        }
 
-	private:
-		concurrency::concurrent_priority_queue<DWORD64, std::greater<DWORD64>> tokens;
-	} rateLimiter;
+    private:
+        concurrency::concurrent_priority_queue<DWORD64, std::greater<DWORD64> > tokens;
+    } rateLimiter;
 
-	bool cache = false;
-	std::wstring translation;
-	if (useFilter)
-	{
-		Trim(sentence);
-		sentence.erase(std::remove_if(sentence.begin(), sentence.end(), [](wchar_t ch) { return ch < ' ' && ch != '\n'; }), sentence.end());
-	}
-	if (sentence.empty()) return true;
-	if (sentence.size() > maxSentenceSize) translation = SENTENCE_TOO_LARGE_TO_TRANS;
-	if (useCache)
-	{
-		auto translationCache = ::translationCache.Acquire();
-		if (auto it = translationCache->find(sentence); it != translationCache->end()) translation = it->second;
-	}
-	if (translation.empty() && (!translateSelectedOnly || sentenceInfo["current select"]))
-		if (rateLimiter.Request() || !useRateLimiter || (!rateLimitSelected && sentenceInfo["current select"])) std::tie(cache, translation) = Translate(splitWString(sentence,L"\x200b \n")[0], tlp.Copy());
-		else translation = TOO_MANY_TRANS_REQUESTS;
-	if (cache) translationCache->operator[](sentence) = translation;
+    bool cache = false;
+    std::wstring translation;
+    std::vector<std::wstring> parts = splitWString(sentence, L"\x200b \n");
+    std::wstring &originalSentence = parts[0];
 
-	if (useFilter) Trim(translation);
-	for (int i = 0; i < translation.size(); ++i) if (translation[i] == '\r' && translation[i + 1] == '\n') translation[i] = 0x200b; // for some reason \r appears as newline - no need to double
-	if (translation.empty()) translation = TRANSLATION_ERROR;
-	(sentence += L"\x200b \n") += translation;
-	return true;
+    if (useFilter) {
+        Trim(originalSentence);
+        originalSentence.erase(std::remove_if(originalSentence.begin(), originalSentence.end(),
+                                              [](wchar_t ch) { return ch < ' ' && ch != '\n'; }), originalSentence.end());
+    }
+    if (originalSentence.empty()) return true;
+    if (originalSentence.size() > maxSentenceSize) translation = SENTENCE_TOO_LARGE_TO_TRANS;
+    if (useCache) {
+        auto translationCache = ::translationCache.Acquire();
+        if (auto it = translationCache->find(originalSentence); it != translationCache->end()) translation = it->second;
+    }
+    if (translation.empty() && (!translateSelectedOnly || sentenceInfo["current select"]))
+        if (rateLimiter.Request() || !useRateLimiter || (!rateLimitSelected && sentenceInfo["current select"]))
+            std::tie(cache, translation) = Translate(originalSentence, tlp.Copy());
+        else translation = TOO_MANY_TRANS_REQUESTS;
+    if (cache) translationCache->operator[](originalSentence) = translation;
+
+    if (useFilter) Trim(translation);
+    for (int i = 0; i < translation.size(); ++i) if (translation[i] == '\r' && translation[i + 1] == '\n')
+        translation[i] = 0x200b; // for some reason \r appears as newline - no need to double
+    if (translation.empty()) translation = TRANSLATION_ERROR;
+
+    sentence = originalSentence;
+    for (size_t i = 1; i < parts.size(); ++i) {
+        sentence += L"\x200b \n" + parts[i];
+    }
+    sentence += L"\x200b \n" + translation;
+    return true;
 }
 
 extern const std::unordered_map<std::wstring, std::wstring> codes;

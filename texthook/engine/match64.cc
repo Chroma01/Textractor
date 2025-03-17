@@ -698,20 +698,109 @@ namespace Engine
 		return false;
 	}
 
-	uint64_t SafeSearchMemory(uint64_t startAddr, uint64_t endAddr, const BYTE* bytes, short length)
-	{
-		__try
-		{
-			for (int i = 0; i < endAddr - startAddr - length; ++i)
-				for (int j = 0; j <= length; ++j)
-					if (j == length) return startAddr + i; // not sure about this algorithm...
-					else if (*((BYTE*)startAddr + i + j) != *(bytes + j) && *(bytes + j) != XX) break;
+	bool hookv8addr(HMODULE module) {
+		auto [minAddress, maxAddress] = Util::QueryModuleLimits(module);
+		bool ok = false;
+		const BYTE bytes[] = {
+			0x44,0x0f,0xb7,0xe8,
+			0x89,0xc1,
+			0x81,0xe1,0x00,0xfc,0x00,0x00,
+			0x81,0xf9,0x00,0xd8,0x00,0x00
+			//���⤪��.exe
+			// �ú����ṹ���»�������ȫһ��������֪��Ϊʲô���ǲ���ȡ����
+			//_QWORD *__fastcall sub_14150CF00(_QWORD *a1, _QWORD *a2, __int64 a3, char a4)
+			//.text:000000014150D0CC 44 0F B7 E8                   movzx   r13d, ax
+			//.text:000000014150D0D0 89 C1                         mov     ecx, eax
+			//.text : 000000014150D0D2 81 E1 00 FC 00 00 and ecx, 0FC00h
+			//.text : 000000014150D0D8 81 F9 00 D8 00 00             cmp     ecx, 0D800h
+		};
+		auto addrs = Util::SearchMemory(bytes, sizeof(bytes), PAGE_EXECUTE_READ, minAddress, maxAddress);
+		for (auto addr : addrs) { 
+			HookParam hp = {};
+			hp.address = addr;
+
+			hp.offset = -8;
+
+			hp.type = USING_UNICODE | NO_CONTEXT;
+			hp.length_offset = 1;
+			ConsoleOutput("Textractor: INSERT extra_v8addr  %p", addr);
+
+			NewHook(hp, "extra_v8addr");
+			ok = true;
 		}
-		__except (EXCEPTION_EXECUTE_HANDLER)
-		{
-			ConsoleOutput("Textractor: SearchMemory ERROR (Textractor will likely still work fine, but please let Artikash know if this happens a lot!)");
+		if(!ok)ConsoleOutput("extra_v8addr not found");
+		return ok;
+	}
+	bool hookv8exports(HMODULE module) {
+		ConsoleOutput("inter extra_v8orcef check");
+		struct pairs_t {
+			const BYTE* bytes;
+			int size;
+			int off;
+		};
+		auto [minAddress, maxAddress] = Util::QueryModuleLimits(module);
+		bool ok = false;
+
+
+		struct libcefFunction { // argument indices start from 0 for SpecialHookMonoString, otherwise 1
+			const char* functionName;
+			size_t textIndex; // argument index
+			short lengthIndex; // argument index
+			unsigned long hookType; // HookParam type
+			void(*text_fun)(DWORD stack, HookParam* hp, BYTE obsoleteAlwaysZero, DWORD* data, DWORD* split, DWORD* len); // HookParam::text_fun_t
+		};
+
+		HookParam hp = {};
+		enum {
+			r8=-0x24-40 , //0x4c
+			rdx=-0x24
+
+		};
+		const libcefFunction funcs[] = {
+			{"?WriteUtf8@String@v8@@QEBAHPEAVIsolate@2@PEADHPEAHH@Z",r8,0,USING_STRING | USING_UTF8 | NO_CONTEXT,NULL}, //ok 
+			{"?WriteUtf8@String@v8@@QEBAHPEADHPEAHH@Z",rdx,0,USING_STRING | USING_UTF8 | NO_CONTEXT,NULL}, //ok 
+			{"?WriteOneByte@String@v8@@QEBAHPEAVIsolate@2@PEAEHHH@Z",r8,0,USING_STRING | USING_UTF8 | NO_CONTEXT,NULL}, //ok 
+			{"?WriteOneByte@String@v8@@QEBAHPEAEHHH@Z",rdx,0,USING_STRING | USING_UTF8 | NO_CONTEXT,NULL}, //ok 
+			{"?Write@String@v8@@QEBAHPEAVIsolate@2@PEAGHHH@Z",r8,0,USING_STRING | USING_UNICODE | NO_CONTEXT,NULL}, //ok 
+			{"?Write@String@v8@@QEBAHPEAGHHH@Z",rdx,0,USING_STRING | USING_UNICODE | NO_CONTEXT,NULL}, //ok 
+			{"?NewFromUtf8@String@v8@@SA?AV?$MaybeLocal@VString@v8@@@2@PEAVIsolate@2@PEBDW4NewStringType@2@H@Z",r8,0,USING_STRING | USING_UTF8 | NO_CONTEXT,NULL}, //ok 
+			{"?NewFromTwoByte@String@v8@@SA?AV?$MaybeLocal@VString@v8@@@2@PEAVIsolate@2@PEBGW4NewStringType@2@H@Z",r8,0,USING_STRING | USING_UNICODE | NO_CONTEXT,NULL}, //ok 
+			{"?NewFromOneByte@String@v8@@SA?AV?$MaybeLocal@VString@v8@@@2@PEAVIsolate@2@PEBEW4NewStringType@2@H@Z",r8,0,USING_STRING | USING_UTF8 | NO_CONTEXT,NULL}, //ok 
+		};
+
+		for (auto func : funcs) {
+			if (FARPROC addr = ::GetProcAddress(module, func.functionName)) {
+				hp.address = (uint64_t)addr ;
+				hp.type = func.hookType;
+				hp.offset = func.textIndex-4 ;
+				hp.length_offset = func.lengthIndex * 4;
+				hp.text_fun = func.text_fun;
+				ConsoleOutput("vnreng: libcef: INSERT  %p", hp.address);
+				NewHook(hp, "extra_v8exports");
+				ok = true;
+			}
 		}
-		return 0;
+
+
+		if (!ok)ConsoleOutput("extra_v8exports not found");
+		return ok;
+	}
+
+	bool checkv8orcef() {
+		ConsoleOutput("checking v8cef");
+		for (HMODULE module : { (HMODULE)processStartAddress, GetModuleHandleW(L"node.dll"), GetModuleHandleW(L"nw.dll") })
+			if (GetProcAddress(module, "?Write@String@v8@@QEBAHPEAGHHH@Z")) {
+				bool ok1 = hookv8addr(module);
+				bool ok2= hookv8exports(module);
+				if (ok1 || ok2)return true;
+			}
+
+		auto hm = GetModuleHandleW(L"libcef.dll");
+		if (hm) {
+			//todo
+		}
+
+		return false;
 	}
 
 	bool InsertArtemis64Hook()
@@ -721,22 +810,21 @@ namespace Engine
 			//__int64 __fastcall sub_14017A760(__int64 a1, char *a2, char **a3)
 			//FLIP FLOP IO
 		};
-		auto addr = SafeSearchMemory(spDefault.minAddress, spDefault.maxAddress, BYTES, sizeof(BYTES));
-
-		if (addr == 0) {
-			ConsoleOutput("Textractor: InsertArtemis64Hook failed");
-			return false;
+		auto addrs = Util::SearchMemory(BYTES, sizeof(BYTES), PAGE_EXECUTE_READ, processStartAddress, processStopAddress);
+		for (auto addr : addrs) {
+			char info[1000] = {};
+			sprintf(info, "Textractor: InsertArtemis64Hook %08x", addr);
+			ConsoleOutput(info);
+			HookParam hp = {};
+			hp.address = addr;
+			hp.type = USING_UTF8 | USING_STRING;
+			hp.offset = -0x24 - 4;//rdx 
+			NewHook(hp, "Artemis64");
+			return true;
 		}
-		char info[1000] = {};
-		sprintf(info, "Textractor: InsertArtemis64Hook %08x", addr);
-		ConsoleOutput(info);
-		HookParam hp = {};
-		hp.address = addr;
-		hp.type = USING_UTF8 | USING_STRING;
-		hp.offset = -0x24 - 4;//rdx 
-		NewHook(hp, "Artemis64");
-		return true;
 
+		ConsoleOutput("Textractor: InsertArtemis64Hook failed");
+		return false;
 	}
 
 	bool InsertArtemisHook() {
@@ -1127,6 +1215,8 @@ namespace Engine
 		if (Util::CheckFile(L"*.pck")) {
 			return InsertGodotHook_X64();
 		}
+
+		if (checkv8orcef())return true;
 
 		for (const wchar_t* moduleName : { (const wchar_t*)NULL, L"node.dll", L"nw.dll" }) if (InsertV8Hook(GetModuleHandleW(moduleName))) return true;
 

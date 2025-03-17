@@ -10300,7 +10300,7 @@ seg000:0044FC14 0F 84 E9 00 00 00             jz      loc_44FD03*/
   return  addrs.size()>bad;
 
 }
-bool hookv8orcef(HMODULE module) {
+bool hookv8addr(HMODULE module) {
   auto [minAddress, maxAddress] = Util::QueryModuleLimits(module);
   const BYTE bytes[] = {
     0x89,0xc1,

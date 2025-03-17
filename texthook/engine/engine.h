@@ -111,7 +111,7 @@ bool InsertFocasLensHook();     // FocasLens: Dat/*.arc, http://www.fo-lens.net
 bool InsertGXPHook();           // GXP: *.gxp
 bool InsertHorkEyeHook();       // HorkEye: resource string
 bool Inserthibiki();
-bool hookv8orcef(HMODULE module);
+bool hookv8addr(HMODULE module);
 bool InsertKAGParserHook();     // plugin/KAGParser.dll
 bool InsertKAGParserExHook();   // plugin/KAGParserEx.dll
 bool InsertKiriKiriHook();      // KiriKiri: *.xp3, resource string

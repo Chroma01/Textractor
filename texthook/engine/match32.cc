@@ -43,12 +43,15 @@ bool CheckCsystem() {
 }
 bool checkv8orcef() {
   for (HMODULE module : { (HMODULE)processStartAddress, GetModuleHandleW(L"node.dll"), GetModuleHandleW(L"nw.dll") })
-    if (GetProcAddress(module, "?Write@String@v8@@QBEHPAGHHH@Z") && hookv8orcef(module))return true;
+  if (GetProcAddress(module, "?Write@String@v8@@QBEHPAGHHH@Z")) {
+    bool ok1 = hookv8addr(module);
+    if (ok1  )return true;
+  }
   auto hm = GetModuleHandleW(L"libcef.dll");
   if (hm) {
-    ConsoleOutput("libcef  %p", hm);
-    if (hookv8orcef(hm))return true;
-    //else if (Extra::InsertlibcefHook(hm))return true;
+    bool ok1 = hookv8addr(hm);
+    bool ok2 = InsertlibcefHook(hm);
+    if (ok1 || ok2)return true;
   }
   return false;
 }

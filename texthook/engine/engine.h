@@ -194,6 +194,7 @@ bool InsertAtelierADV10Hook();  // Atelier ADV10: ADV10.EXE, resource string
 bool InsertAquaplusHooks();     // Aquaplus: Data/*.pck
 bool InsertCielHooks();          // Ciel: sys/kidoku.dat
 bool InsertA98sysHook();        // A98sys: A98SYS.PAK
+bool InsertNitroplusSysHook();  // NitroplusSystem: resource string && system.dll
 
 // CIRCUS: avdata/
 bool InsertCircusHook1();

@@ -441,6 +441,10 @@ bool DetermineEngineByFile4()
     if (InsertMinoriHooks())
       return true;
   }
+  if (Util::CheckFile(L"nya/configse.xtx")) {
+    if (InsertSystemNNNHooks())
+      return true;
+  }
   if (Util::CheckFile(L"EAGLS.dll")) { // jichi 3/24/2014: E.A.G.L.S
     //ConsoleOutput("vnreng: IGNORE EAGLS");
     InsertEaglsHook();

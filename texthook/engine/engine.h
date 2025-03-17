@@ -180,6 +180,7 @@ bool InsertWaffleHook();        // WAFFLE: cg.pak
 bool InsertMinoriHooks();        // Minori: *.paz
 
 bool InsertAges7Hook();         // AGES 7.0: Ages3ResT.dll
+bool InsertSystemNNNHooks();    // System-NNN: nya/configse.xtx
 
 // CIRCUS: avdata/
 bool InsertCircusHook1();

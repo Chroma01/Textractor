@@ -9966,17 +9966,17 @@ bool InsertWillPlusAHook()
       if (addr2) {
           HookParam myhp = {};
           myhp.address = addr2 + 2;
-  
-          myhp.type = USING_UNICODE | NO_CONTEXT | USING_STRING; 
-  
+
+          myhp.type = USING_UNICODE | NO_CONTEXT | USING_STRING;
+
           myhp.offset = pusha_eax_off - 4;//esp+4
-  
+
           char nameForUser[HOOK_NAME_SIZE] = "WillPlus3_memcpy";
           NewHook(myhp, nameForUser);
           ConsoleOutput("Insert: WillPlus3_memcpy Hook");
           return true;
-      }	
-  
+      }
+
   const BYTE bytes[] = {
     0x81,0xec, 0x14,0x08,0x00,0x00 // 0042B5E0   81EC 14080000    SUB ESP,0x814	; jichi: text in eax, name in eax - 1024, able to copy
   };
@@ -10179,7 +10179,7 @@ bool InsertWillPlusExHook() {
        0xc7,0x45,0xfc,0x00,0x00,0x00,0x00,
        0x33,0xc9,
        0xc7,0x47,0x78,0x00,0x00,0x00,0x00
-  }; 
+  };
   ULONG addr = MemDbg::findBytes(bytes, sizeof(bytes), processStartAddress, processStopAddress);
 
   if (addr == 0)return false;
@@ -10250,7 +10250,7 @@ bool InsertCsystemHook() {
   auto addrs = Util::SearchMemory(bytes, sizeof(bytes), PAGE_EXECUTE_READWRITE, processStartAddress, processStopAddress);
   auto addrs2 = Util::SearchMemory(bytes2, sizeof(bytes2), PAGE_EXECUTE_READWRITE, processStartAddress, processStopAddress);
   addrs.insert(addrs.end(), addrs2.begin(), addrs2.end());
-  for (auto addr : addrs) { 
+  for (auto addr : addrs) {
     HookParam hp = {};
     hp.address = addr;
     hp.offset = -0x14;
@@ -10292,7 +10292,7 @@ seg000:0044FC14 0F 84 E9 00 00 00             jz      loc_44FD03*/
 
     ConsoleOutput("Textractor: INSERT hibiki_extra %p",addr);
 
-    NewHook(hp, "hibiki_extra"); 
+    NewHook(hp, "hibiki_extra");
    }
 
 
@@ -10341,7 +10341,7 @@ bool hookv8addr(HMODULE module) {
 
   hp.offset =-8;
 
-  hp.type = USING_UNICODE | NO_CONTEXT; 
+  hp.type = USING_UNICODE | NO_CONTEXT;
   hp.length_offset = 1;
   ConsoleOutput("Textractor: INSERT extra_v8addr  %p", addr);
 
@@ -15039,7 +15039,7 @@ bool InsertHorkEyeHook()
     NewHook(hp, "HorkEye3");
     return true;
   }
-   
+
   ConsoleOutput("vnreng:HorkEye: pattern not found");
   return false;
   
@@ -15048,8 +15048,8 @@ bool InsertHorkEyeHook()
 		std::vector<DWORD> findrelativecall(const BYTE* pattern ,int length,DWORD calladdress,DWORD start, DWORD end)
 		{
 			std::vector<DWORD> save;
-			for (; start < end;start+=1 ) { 
-				DWORD addr=MemDbg::findBytes(pattern, length, start, end); 
+			for (; start < end;start+=1 ) {
+				DWORD addr=MemDbg::findBytes(pattern, length, start, end);
 				start = addr;
 				if (!addr)return save;
 
@@ -15057,7 +15057,7 @@ bool InsertHorkEyeHook()
 
 				union little {
 					DWORD _dw;
-					BYTE _bytes[4]; 
+					BYTE _bytes[4];
 				}relative;
 				relative._dw = (calladdress - addr -length- 5);
 				DWORD calladdr = addr + length;
@@ -15072,7 +15072,7 @@ bool InsertHorkEyeHook()
 					if ((_a[0] == _b[0]) && (_a[1] == _b[1]) && (_a[2] == _b[2]) && (_a[3] == _b[3])) {
 						save.push_back(start);
 					}
-				} 
+				}
 			}
 			return save;
 		}
@@ -15100,10 +15100,10 @@ bool InsertHorkEyeHook()
 				0x83,0xec,0x38,0x53,0x56,0x8b,0xf1
 			};
 
-			ULONG addr = MemDbg::findBytes(bytes1, sizeof(bytes1), processStartAddress, processStopAddress); 
-			if (!addr) { 
+			ULONG addr = MemDbg::findBytes(bytes1, sizeof(bytes1), processStartAddress, processStopAddress);
+			if (!addr) {
 				return false;
-			}  
+			}
 			const BYTE bytes2[] = {
 				/*	.text:0043E95E FF 75 08                      push[ebp + arg_0]
 	.text:0043E961 8B CE                         mov     ecx, esi
@@ -15117,9 +15117,9 @@ bool InsertHorkEyeHook()
 			const BYTE funcstart[] = {
 				0x55,0x8b,0xec
 			};
-			for(auto addr :addrs){ 
+			for(auto addr :addrs){
 				addr = reverseFindBytes(funcstart, sizeof(funcstart), addr-0x100, addr);
-				if (!addr)continue; 
+				if (!addr)continue;
 				HookParam hp = {};
 				hp.address = addr;
 				hp.offset = -8;
@@ -15127,7 +15127,7 @@ bool InsertHorkEyeHook()
 				ConsoleOutput("Textractor: INSERT HOOK_AGS %p",addr);
 				NewHook(hp, "HOOK_AGS");
 				ok = true;
-			} 
+			}
 
 
 			return ok;
@@ -15206,7 +15206,7 @@ bool InsertHorkEyeHook()
 		}
 		bool InsertlibcefHook(HMODULE module)
 		{
-			if (!module)return false; 
+			if (!module)return false;
 
 			bool ret = false;
 

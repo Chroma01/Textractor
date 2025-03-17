@@ -177,6 +177,7 @@ void InsertRealliveHook();      // RealLive: RealLive*.exe
 void InsertStuffScriptHook();   // Stuff: *.mpk
 bool InsertTinkerBellHook();    // TinkerBell: arc00.dat
 bool InsertWaffleHook();        // WAFFLE: cg.pak
+bool InsertMinoriHooks();        // Minori: *.paz
 
 bool InsertAges7Hook();         // AGES 7.0: Ages3ResT.dll
 

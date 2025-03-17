@@ -437,6 +437,10 @@ bool DetermineEngineByFile4()
     if (InsertDmmHooks())
       return true;
   }
+  if (Util::CheckFile(L"*.paz")) {
+    if (InsertMinoriHooks())
+      return true;
+  }
   if (Util::CheckFile(L"EAGLS.dll")) { // jichi 3/24/2014: E.A.G.L.S
     //ConsoleOutput("vnreng: IGNORE EAGLS");
     InsertEaglsHook();

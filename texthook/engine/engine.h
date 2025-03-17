@@ -168,6 +168,7 @@ bool InsertGameMakerHook();     // GameMaker: GMResource.dll
 bool InsertDxLibHook();         // DxLib: *.bcx
 bool InsertCodeXHook();         // codeX RScript: *.xfl
 bool InsertYaneSDKHook();       // YaneSDK: arc/evimage.dat
+bool InsertBishopHook();        // Bishop: *.bsa
 
 bool InsertAnimHook(); //
 bool InsertAnim2Hook(); //

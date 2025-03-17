@@ -161,6 +161,9 @@ bool InsertYukaSystem2Hook();   // YukaSystem2: *.ykc
 bool InsertYurisHook();         // YU-RIS: *.ypf
 bool InsertDebonosuWorksHook(); // DebonosuWorks: resource string
 
+bool InsertAnimHook(); //
+bool InsertAnim2Hook(); //
+bool InsertCotophaHook3();
 void InsertBrunsHook();         // Bruns: bruns.exe
 void InsertIronGameSystemHook();// IroneGameSystem: igs_sample.exe
 void InsertLucifenHook();       // Lucifen@Navel: *.lpk

@@ -427,6 +427,10 @@ bool DetermineEngineByFile4()
     if (InsertDebonosuWorksHook() || InsertDebonosuWorksNewHook())
       return true;
   }
+  if (Util::CheckFile(L"Ages3ResT.dll")) {
+    if (InsertAges7Hook())
+      return true;
+  }
   if (Util::CheckFile(L"EAGLS.dll")) { // jichi 3/24/2014: E.A.G.L.S
     //ConsoleOutput("vnreng: IGNORE EAGLS");
     InsertEaglsHook();
@@ -492,9 +496,9 @@ bool DetermineEngineByFile4()
     return true;
   }
 
-	
+
 	  if (Util::CheckFile(L"voice\\*.pck")) {
-      return InsertAnimHook() || InsertAnim2Hook();    
+      return InsertAnimHook() || InsertAnim2Hook();
   }
   // jichi 11/22/2015: 凍京NECRO 体験版
   // Jazzinghen 23/05/2020: Add check for 凍京NECRO

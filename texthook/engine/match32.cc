@@ -485,6 +485,10 @@ bool DetermineEngineByFile4()
     if (InsertAquaplusHooks())
       return true;
   }
+  if (Util::CheckFile(L"sys/kidoku.dat")) {
+    if (InsertCielHooks())
+      return true;
+  }
   if (Util::CheckFile(L"EAGLS.dll")) { // jichi 3/24/2014: E.A.G.L.S
     //ConsoleOutput("vnreng: IGNORE EAGLS");
     InsertEaglsHook();

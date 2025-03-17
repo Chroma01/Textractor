@@ -191,6 +191,7 @@ bool InsertKaleidoHook();       // Kaleido ADV Workshop: windata/script_body.bin
 bool InsertAtelierGSHooks();    // Atelier GAME_SYS: game_sys.exe, resource string
 bool InsertAtelierADV10Hook();  // Atelier ADV10: ADV10.EXE, resource string
 bool InsertAquaplusHooks();     // Aquaplus: Data/*.pck
+bool InsertCielHooks();          // Ciel: sys/kidoku.dat
 
 // CIRCUS: avdata/
 bool InsertCircusHook1();

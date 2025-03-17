@@ -133,7 +133,7 @@ bool DetermineEngineByFile1()
 {
 	if (Util::SearchResourceString(L"Proportional ONScripter") || Util::SearchResourceString(L"ponscr.exe"))
 	{
-		InsertPONScripterHook();
+		InsertPONScripterHooks();
 		return true;
 	}
 	if (Util::SearchResourceString(L"HorkEye")) { // appear in copyright: Copyright (C) HorkEye, http://horkeye.com

@@ -166,6 +166,7 @@ bool InsertYurisHook();         // YU-RIS: *.ypf
 bool InsertDebonosuWorksHook(); // DebonosuWorks: resource string
 bool InsertGameMakerHook();     // GameMaker: GMResource.dll
 bool InsertDxLibHook();         // DxLib: *.bcx
+bool InsertCodeXHook();         // codeX RScript: *.xfl
 
 bool InsertAnimHook(); //
 bool InsertAnim2Hook(); //

@@ -178,6 +178,7 @@ bool InsertKissHook();          // Kiss: GameData/*.arc
 bool InsertSysdHook();          // Sysd: sysd.ini
 bool InsertKogadoHook();        // Kogado: *.pak
 bool InsertLucaSystemHook();    // LucaSystem: *.iga
+bool InsertSakanaGLHook();      // SakanaGL: sakanagl.dll
 
 bool InsertAnimHook(); //
 bool InsertAnim2Hook(); //

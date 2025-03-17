@@ -533,6 +533,10 @@ bool DetermineEngineByFile4()
     if (InsertLucaSystemHook())
       return true;
   }
+  if (Util::CheckFile(L"sakanagl.dll")) {
+    if (InsertSakanaGLHook())
+      return true;
+  }
   if (Util::CheckFile(L"EAGLS.dll")) { // jichi 3/24/2014: E.A.G.L.S
     //ConsoleOutput("vnreng: IGNORE EAGLS");
     InsertEaglsHook();

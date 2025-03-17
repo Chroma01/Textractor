@@ -525,6 +525,10 @@ bool DetermineEngineByFile4()
     if (InsertSysdHook())
       return true;
   }
+  if (Util::CheckFile(L"*.pak")) {
+    if (InsertKogadoHook())
+      return true;
+  }
   if (Util::CheckFile(L"EAGLS.dll")) { // jichi 3/24/2014: E.A.G.L.S
     //ConsoleOutput("vnreng: IGNORE EAGLS");
     InsertEaglsHook();

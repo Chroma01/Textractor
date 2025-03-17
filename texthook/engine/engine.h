@@ -195,6 +195,7 @@ bool InsertAquaplusHooks();     // Aquaplus: Data/*.pck
 bool InsertCielHooks();          // Ciel: sys/kidoku.dat
 bool InsertA98sysHook();        // A98sys: A98SYS.PAK
 bool InsertNitroplusSysHook();  // NitroplusSystem: resource string && system.dll
+bool InsertSekaiProjectHooks(); // Sekai Project: Packs/*.GPK
 
 // CIRCUS: avdata/
 bool InsertCircusHook1();

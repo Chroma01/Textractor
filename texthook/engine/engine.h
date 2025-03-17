@@ -164,6 +164,7 @@ bool InsertWolfHook();          // Wolf: Data.wolf
 bool InsertYukaSystem2Hook();   // YukaSystem2: *.ykc
 bool InsertYurisHook();         // YU-RIS: *.ypf
 bool InsertDebonosuWorksHook(); // DebonosuWorks: resource string
+bool InsertGameMakerHook();     // GameMaker: GMResource.dll
 
 bool InsertAnimHook(); //
 bool InsertAnim2Hook(); //

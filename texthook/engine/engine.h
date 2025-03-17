@@ -184,6 +184,8 @@ bool InsertAges7Hook();         // AGES 7.0: Ages3ResT.dll
 bool InsertCircusHook1();
 bool InsertCircusHook2();
 
+bool InsertDmmHooks();          // DMM: Data/Exi_UT2.sdat
+
 } // namespace Engine
 
 // EOF

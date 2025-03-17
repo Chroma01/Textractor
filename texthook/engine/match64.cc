@@ -697,6 +697,41 @@ namespace Engine
 		ConsoleOutput("Textractor: Ren'py failed: failed to find python2X.dll");
 		return false;
 	}
+	bool InsertGodotHook2_X64() {
+		//by Blu3train
+		/*
+		* Sample games:
+		* https://vndb.org/r109138
+		*/
+		const BYTE bytes[] = {
+			0x48, 0x8B, 0x94, 0x24, XX4,       // mov rdx,[rsp+000001C0]	<- hook here
+			0x4C, 0x89, 0xE1,                  // mov rcx,r12
+			0xE8, XX4,                         // call NULL-Windows.exe+D150
+			0x49, 0x8B, 0x06,                  // mov rax,[r14]
+			0x48, 0x85, 0xC0,                  // test rax,rax
+			0x0F, 0x85, XX4                    // jne NULL-Windows.exe+A359D4
+
+		};
+
+		ULONG64 range = min(processStopAddress - processStartAddress, X64_MAX_REL_ADDR);
+		for (auto addr : Util::SearchMemory(bytes, sizeof(bytes), PAGE_EXECUTE, processStartAddress, processStartAddress + range)) {
+			HookParam hp = {};
+			hp.address = addr;
+			hp.offset = pusha_rcx_off -4; //RCX
+			hp.type = USING_STRING | USING_UNICODE;
+			ConsoleOutput("vnreng: INSERT Godot2_x64 Hook ");
+			NewHook(hp, "Godot2_x64");
+			return true;
+		}
+
+		ConsoleOutput("vnreng:Godot2_x64: pattern not found");
+		return false;
+	}
+
+	bool InsertGodotHooks_X64()
+	{
+	  return InsertGodotHook2_X64();
+	}
 
 	bool InsertLucaSystemHook()
 	{

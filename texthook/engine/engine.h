@@ -174,6 +174,7 @@ bool InsertTrianglePixHook();   // Triangle Pix: pix.bin
 bool InsertISMscriptHooks();    // ISM script Engine: ism.dll
 bool InsertKidHook();           // Kid: resource string
 bool InsertKissHook();          // Kiss: GameData/*.arc
+bool InsertSysdHook();          // Sysd: sysd.ini
 
 bool InsertAnimHook(); //
 bool InsertAnim2Hook(); //

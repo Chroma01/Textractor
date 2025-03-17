@@ -180,7 +180,7 @@ bool InsertlibcefHook(HMODULE module);
 void InsertLucifenHook();       // Lucifen@Navel: *.lpk
 void InsertRyokuchaHook();      // Ryokucha: _checksum.exe
 void InsertRealliveHook();      // RealLive: RealLive*.exe
-void InsertStuffScriptHook();   // Stuff: *.mpk
+void InsertStuffScriptHooks();  // Stuff: *.mpk
 bool InsertTinkerBellHook();    // TinkerBell: arc00.dat
 bool InsertWaffleHook();        // WAFFLE: cg.pak
 bool InsertMinoriHooks();        // Minori: *.paz

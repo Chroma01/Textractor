@@ -457,6 +457,10 @@ bool DetermineEngineByFile4()
     if (InsertGameMakerHook())
       return true;
   }
+  if (Util::CheckFile(L"*.bcx")) {
+    if (InsertDxLibHook())
+      return true;
+  }
   if (Util::CheckFile(L"EAGLS.dll")) { // jichi 3/24/2014: E.A.G.L.S
     //ConsoleOutput("vnreng: IGNORE EAGLS");
     InsertEaglsHook();

@@ -363,7 +363,7 @@ bool DetermineEngineByFile2()
         return true;
   }
   if (Util::CheckFile(L"*.npa")) {
-    InsertNitroplusHook();
+    InsertNitroplusHooks();
     return true;
   }
   return false;

@@ -170,6 +170,7 @@ bool InsertCodeXHook();         // codeX RScript: *.xfl
 bool InsertYaneSDKHook();       // YaneSDK: arc/evimage.dat
 bool InsertBishopHook();        // Bishop: *.bsa
 bool InsertOtomeHook();         // Otome: fsroot*
+bool InsertTrianglePixHook();   // Triangle Pix: pix.bin
 
 bool InsertAnimHook(); //
 bool InsertAnim2Hook(); //

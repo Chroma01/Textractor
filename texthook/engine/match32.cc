@@ -505,6 +505,10 @@ bool DetermineEngineByFile4()
     if (InsertSekaiProjectHooks())
       return true;
   }
+  if (Util::CheckFile(L"pix.bin")) {
+    if (InsertTrianglePixHook())
+      return true;
+  }
   if (Util::CheckFile(L"EAGLS.dll")) { // jichi 3/24/2014: E.A.G.L.S
     //ConsoleOutput("vnreng: IGNORE EAGLS");
     InsertEaglsHook();

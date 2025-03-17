@@ -4816,7 +4816,7 @@ bool InsertMajiroHook()
   return true;
 }
 
-bool InsertMajiro3Hook() 
+bool InsertMajiro3Hook()
 {
   //by Blu3train
   /*
@@ -4830,7 +4830,7 @@ bool InsertMajiro3Hook()
   */
   const BYTE bytes[] = {
     0xC1, 0xE9, 0x02,        // shr ecx,02     << hook here
-    0xF3, 0xA5,              // repe movsd 
+    0xF3, 0xA5,              // repe movsd
     0x8B, 0xCA,              // mov ecx,edx
     0x8D, 0x95, XX4          // lea edx,[ebp-00000404]
   };
@@ -4854,7 +4854,7 @@ bool InsertMajiro3Hook()
 }
 
 bool InsertMajiroHooks()
-{ 
+{
   bool ok = InsertMajiroHook();
   return InsertMajiro3Hook() || ok;
 }
@@ -10032,7 +10032,7 @@ bool StuffScript2Filter(LPVOID data, DWORD *size, HookParam *, BYTE)
 
   return true;
 }
-bool InsertStuffScript2Hook() 
+bool InsertStuffScript2Hook()
 {
   //by Blu3train
     /*
@@ -10090,7 +10090,7 @@ bool StuffScript3Filter(LPVOID data, DWORD *size, HookParam *, BYTE)
 
   StringFilterBetween(text, len, "/\x81\x79", 3, "\x81\x7A", 2); //remove hidden name
   StringFilterBetween(text, len, "[", 1, "]", 1); //garbage
-  
+
   //ruby
   CharFilter(text, len, '<');
   StringFilterBetween(text, len, ",", 1, ">", 1);
@@ -10100,7 +10100,7 @@ bool StuffScript3Filter(LPVOID data, DWORD *size, HookParam *, BYTE)
 
   return true;
 }
-bool InsertStuffScript3Hook() 
+bool InsertStuffScript3Hook()
 {
   //by Blu3train
     /*
@@ -10108,7 +10108,7 @@ bool InsertStuffScript3Hook()
     * https://vndb.org/v3111
     */
   const BYTE bytes[] = {
-    0xCC,                    // int 3 
+    0xCC,                    // int 3
     0x81, 0xEC, XX4,         // sub esp,00000140          <-- hook here
     0xA1, XX4,               // mov eax,[EVOLIMIT.exe+8C1F0]
     0x33, 0xC4,              // xor eax,esp
@@ -26266,6 +26266,42 @@ bool InsertSekaiProject3Hook()
 
 bool InsertSekaiProjectHooks()
 { return InsertSekaiProject1Hook() || InsertSekaiProject2Hook() || InsertSekaiProject3Hook();}
+
+bool InsertTrianglePixHook()
+{
+  //by Blu3train
+    /*
+    * Sample games:
+    * https://vndb.org/v38070
+    * https://vndb.org/v42090
+    * https://vndb.org/v41025
+    */
+  const BYTE bytes[] = {
+    0x50,                      // push eax           << hook here
+    0xE8, XX4,                 // call FinalIgnition.exe+4DE10
+    0x8B, 0x83, XX4,           // mov eax,[ebx+0000DCA0]
+    0x8D, 0x8D, XX4,           // lea ecx,[ebp-0000022C]
+    0x83, 0x7D, 0x44, 0x10,    // cmp dword ptr [ebp+44],10
+    0xFF, 0x75, 0x40           // push [ebp+40]
+  };
+
+  ULONG range = min(processStopAddress - processStartAddress, MAX_REL_ADDR);
+  ULONG addr = MemDbg::findBytes(bytes, sizeof(bytes), processStartAddress, processStartAddress + range);
+  if (!addr) {
+    ConsoleOutput("vnreng:TrianglePix: pattern not found");
+    return false;
+  }
+
+  HookParam hp = {};
+  hp.address = addr;
+  hp.offset = pusha_eax_off -4;
+  hp.index = 0;
+  hp.type = USING_UTF8 | USING_STRING | NO_CONTEXT;
+  hp.filter_fun = NewLineCharToSpaceFilter;
+  ConsoleOutput("vnreng: INSERT TrianglePix");
+  NewHook(hp, "TrianglePix");
+  return true;
+}
 
 } // namespace Engine
 

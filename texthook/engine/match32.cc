@@ -250,7 +250,7 @@ bool DetermineEngineByFile1()
     return true;
   }
   if (Util::CheckFile(L"message.dat")) {
-    InsertAtelierHook();
+    InsertAtelierHooks();
     return true;
   }
   if (Util::CheckFile(L"game_sys.exe") && Util::SearchResourceString(L"KaGuYa")) {

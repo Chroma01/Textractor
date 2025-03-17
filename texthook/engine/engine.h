@@ -176,6 +176,7 @@ bool InsertKidHook();           // Kid: resource string
 bool InsertKissHook();          // Kiss: GameData/*.arc
 bool InsertSysdHook();          // Sysd: sysd.ini
 bool InsertKogadoHook();        // Kogado: *.pak
+bool InsertLucaSystemHook();    // LucaSystem: *.iga
 
 bool InsertAnimHook(); //
 bool InsertAnim2Hook(); //

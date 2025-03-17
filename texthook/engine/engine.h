@@ -210,6 +210,9 @@ bool InsertCircusHook2();
 
 bool InsertDmmHooks();          // DMM: Data/Exi_UT2.sdat
 
+// Anim engines
+bool InsertAnim3Hook();
+
 } // namespace Engine
 
 // EOF

@@ -698,6 +698,68 @@ namespace Engine
 		return false;
 	}
 
+	bool InsertLucaSystemHook()
+	{
+		//by Blu3train
+		/*
+		* Sample games:
+		* https://vndb.org/r108105
+		*/
+		const BYTE bytes[] = {
+			0xCC,                                // int 3
+			0x48, XX4,                           // mov [rsp+18],rbx       <- hook here
+			0x55,                                // push rbp
+			0x56,                                // push rsi
+			0x57,                                // push rdi
+			0x41, 0x54,                          // push r12
+			0x41, 0x55,                          // push r13
+			0x41, 0x56,                          // push r14
+			0x41, 0x57,                          // push r15
+			0x48, 0x8D, 0xAC, 0x24, XX4,         // lea rbp,[rsp-00003810]
+			0xB8, XX4                            // mov eax,00003910
+		};
+
+		ULONG64 range = min(processStopAddress - processStartAddress, X64_MAX_REL_ADDR);
+		for (auto addr : Util::SearchMemory(bytes, sizeof(bytes), PAGE_EXECUTE, processStartAddress, processStartAddress + range)) {
+			HookParam hp = {};
+			hp.address = addr + 1;
+			hp.offset = pusha_rdx_off -4; //RDX
+			hp.filter_fun = [](LPVOID data, DWORD *size, HookParam *, BYTE)
+			{
+				auto text = reinterpret_cast<LPWSTR>(data);
+				auto len = reinterpret_cast<size_t *>(size);
+
+				if (text[0] == L'\x3000') { //removes space at the beginning of the sentence
+					*len -= 2;
+					::memmove(text, text + 1, *len);
+				}
+
+				if ( *text == L'@' ) //Name in square brackets instead of '@'
+					if ( wchar_t *match2 = cpp_wcsnchr(text+1, L'@', *len/2-1) ) {
+						*text = L'[';
+						*match2 = L']';
+					}
+
+				WideStringFilterBetween(text, len, L"$C(", 3, L")", 1);
+				WideStringFilter(text, len, L"$A", 3); // remove $A followed by 1 char
+				WideStringCharReplacer(text, len, L"$d", 2, L'\n');
+				WideCharFilter(text, len, L'\xFF3F');
+				//ruby
+				WideStringFilter(text, len, L"$[", 2);
+				WideStringFilterBetween(text, len, L"$/", 2, L"$]", 2);
+
+				return true;
+			};
+			hp.type = USING_UNICODE | USING_STRING;
+			ConsoleOutput("vnreng: INSERT LucaSystem Hook ");
+			NewHook(hp, "LucaSystem");
+			return true;
+		}
+
+		ConsoleOutput("vnreng:LucaSystem: pattern not found");
+		return false;
+	}
+
 	bool InsertKiriKiriZHook()
 	{
 		//by Blu3train
@@ -1264,6 +1326,11 @@ namespace Engine
 			ConsoleOutput("Textractor: Precompiled Unity found (searching for hooks should work)");
 			wcscpy_s(spDefault.boundaryModule, L"GameAssembly.dll");
 			spDefault.padding = 20;
+			return true;
+		}
+
+		if (Util::CheckFile(L"files/*.PAK")) {
+			InsertLucaSystemHook();
 			return true;
 		}
 

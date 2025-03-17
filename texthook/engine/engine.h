@@ -208,6 +208,8 @@ bool InsertSekaiProjectHooks(); // Sekai Project: Packs/*.GPK
 // CIRCUS: avdata/
 bool InsertCircusHook1();
 bool InsertCircusHook2();
+bool InsertCircusHook3();
+bool InsertCircusHook4();
 
 bool InsertDmmHooks();          // DMM: Data/Exi_UT2.sdat
 

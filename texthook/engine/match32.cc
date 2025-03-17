@@ -28,6 +28,31 @@ bool DetermineGameHooks() // 7/19/2015
   return false;
 }
 
+bool CheckCsystem() {
+  //WendyBell
+  wchar_t arcdatpattern[] = L"Arc0%d.dat";
+  wchar_t arcdat[20];
+  bool iswendybell = false;
+  for (int i = 0; i < 10; i++) {
+    wsprintf(arcdat, arcdatpattern, i);
+    if (Util::CheckFile(arcdat)) {
+      iswendybell = true; break;
+    }
+  }
+  return (iswendybell && InsertCsystemHook());
+}
+bool checkv8orcef() {
+  for (HMODULE module : { (HMODULE)processStartAddress, GetModuleHandleW(L"node.dll"), GetModuleHandleW(L"nw.dll") })
+    if (GetProcAddress(module, "?Write@String@v8@@QBEHPAGHHH@Z") && hookv8orcef(module))return true;
+  auto hm = GetModuleHandleW(L"libcef.dll");
+  if (hm) {
+    ConsoleOutput("libcef  %p", hm);
+    if (hookv8orcef(hm))return true;
+    //else if (Extra::InsertlibcefHook(hm))return true;
+  }
+  return false;
+}
+
 // jichi 7/17/2014: Disable GDI hooks for PPSSPP
 bool DeterminePCEngine()
 {
@@ -58,6 +83,15 @@ bool DeterminePCEngine()
       InsertDACHook();
       return true;
   }
+
+  if (Util::CheckFile(L"voice/*.pk")|| Util::CheckFile(L"sound/*.pk")|| Util::CheckFile(L"misc/*.pk")) {
+		if(InsertAGSHook())
+			return true;
+	}
+
+  if (CheckCsystem()) {
+		return true;
+	}
 
   // jichi 5/14/2015: Skip hijacking BALDRSKY ZEROs
   //if (Util::CheckFile(L"bsz_Data\\Mono\\mono.dll") || Util::CheckFile(L"bsz2_Data\\Mono\\mono.dll")) {
@@ -98,6 +132,10 @@ bool DetermineEngineByFile1()
 		InsertPONScripterHook();
 		return true;
 	}
+	if (Util::SearchResourceString(L"HorkEye")) { // appear in copyright: Copyright (C) HorkEye, http://horkeye.com
+	  InsertHorkEyeHook();
+		return true;
+	}
   // Artikash 7/14/2018: AIRNovel - sample game https://vndb.org/v18814
   if (Util::CheckFile(L"*.swf"))
   {
@@ -118,6 +156,13 @@ bool DetermineEngineByFile1()
 	  InsertLightvnHook();
 	  return true;
   }
+
+  if (checkv8orcef()) return true;
+
+  if (Util::CheckFile(L"arc/*.dat")) {
+    Inserthibiki();
+		return true;
+	}
 
   if (Util::CheckFile(L"*.xp3") || Util::SearchResourceString(L"TVP(KIRIKIRI)")) {
     if (Util::SearchResourceString(L"TVP(KIRIKIRI) Z ")) { // TVP(KIRIKIRI) Z CORE
@@ -656,10 +701,6 @@ bool DetermineEngineAtLast()
     return true;
   }
   //if (Util::CheckFile(L"arc0.dat") && Util::CheckFile(L"script.dat") // jichi 11/14/2014: too common
-  if (Util::SearchResourceString(L"HorkEye")) { // appear in copyright: Copyright (C) HorkEye, http://horkeye.com
-    InsertHorkEyeHook();
-    return true;
-  }
   if (Util::CheckFile(L"comnArc.arc") // jichi 8/17/2014: this file might exist in multiple files
       && InsertNexton1Hook()) // old nexton game
     return true;

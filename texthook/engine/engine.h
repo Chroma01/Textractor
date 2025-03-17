@@ -82,6 +82,7 @@ bool InsertAIRNovelHook();      // AIRNovel: *.swf
 bool InsertAdobeFlash10Hook();  // Adobe Flash Player 10
 bool InsertAliceHook();         // System40@AliceSoft; do not work for latest alice games
 //bool InsertAmuseCraftHook();    // AMUSE CRAFT: *.pac
+bool InsertAGSHook();
 bool InsertAnex86Hook();        // Anex86: anex86.exe
 bool InsertAOSHook();           // AOS: *.aos
 bool InsertApricoTHook();       // Apricot: arc.a*
@@ -96,6 +97,7 @@ bool InsertCandyHook();         // SystemC@CandySoft: *.fpk
 bool InsertCatSystemHook();     // CatSystem2: *.int
 bool InsertCMVSHook();          // CMVS: data/pack/*.cpz; do not support the latest cmvs32.exe and cmvs64.exe
 bool InsertCotophaHook();       // Cotopha: *.noa
+bool InsertCsystemHook();
 bool InsertDACHook();           // DAC
 bool InsertDebonosuHook();      // Debonosu: bmp.bak and dsetup.dll
 bool InsertDebonosuWorksNewHook();  // Debonosu (new version)
@@ -108,6 +110,8 @@ bool InsertExpHook();           // EXP: http://www.exp-inc.jp
 bool InsertFocasLensHook();     // FocasLens: Dat/*.arc, http://www.fo-lens.net
 bool InsertGXPHook();           // GXP: *.gxp
 bool InsertHorkEyeHook();       // HorkEye: resource string
+bool Inserthibiki();
+bool hookv8orcef(HMODULE module);
 bool InsertKAGParserHook();     // plugin/KAGParser.dll
 bool InsertKAGParserExHook();   // plugin/KAGParserEx.dll
 bool InsertKiriKiriHook();      // KiriKiri: *.xp3, resource string
@@ -166,6 +170,7 @@ bool InsertAnim2Hook(); //
 bool InsertCotophaHook3();
 void InsertBrunsHook();         // Bruns: bruns.exe
 void InsertIronGameSystemHook();// IroneGameSystem: igs_sample.exe
+bool InsertlibcefHook(HMODULE module);
 void InsertLucifenHook();       // Lucifen@Navel: *.lpk
 void InsertRyokuchaHook();      // Ryokucha: _checksum.exe
 void InsertRealliveHook();      // RealLive: RealLive*.exe

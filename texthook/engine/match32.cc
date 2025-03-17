@@ -493,6 +493,10 @@ bool DetermineEngineByFile4()
     if (InsertA98sysHook())
       return true;
   }
+  if (Util::CheckFile(L"fsroot*")) {
+    if (InsertOtomeHook())
+      return true;
+  }
   if (Util::CheckFile(L"EAGLS.dll")) { // jichi 3/24/2014: E.A.G.L.S
     //ConsoleOutput("vnreng: IGNORE EAGLS");
     InsertEaglsHook();

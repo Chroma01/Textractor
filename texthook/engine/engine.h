@@ -188,6 +188,8 @@ bool InsertAges7Hook();         // AGES 7.0: Ages3ResT.dll
 bool InsertSystemNNNHooks();    // System-NNN: nya/configse.xtx
 bool InsertRpgmXPHook();        // Rpgm XP: *.rgssad
 bool InsertKaleidoHook();       // Kaleido ADV Workshop: windata/script_body.bin
+bool InsertAtelierGSHooks();    // Atelier GAME_SYS: game_sys.exe, resource string
+bool InsertAtelierADV10Hook();  // Atelier ADV10: ADV10.EXE, resource string
 
 // CIRCUS: avdata/
 bool InsertCircusHook1();

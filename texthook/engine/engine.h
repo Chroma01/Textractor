@@ -150,6 +150,7 @@ bool InsertSiglusHook();        // SiglusEngine: SiglusEngine.exe
 bool InsertSideBHook();         // SideB: Copyright side-B
 bool InsertSilkysHooks();       // SilkysPlus
 bool InsertSyuntadaHook();      // Syuntada: dSoh.dat
+bool InsertSystem42Hook();      // System42@AliceSoft: AliceStart.ini DLL/Sys42VM.dll
 bool InsertSystem43Hook();      // System43@AliceSoft: AliceStart.ini
 bool InsertSystemAoiHook();     // SystemAoi: *.vfs
 bool InsertTamamoHook();        // Tamamo

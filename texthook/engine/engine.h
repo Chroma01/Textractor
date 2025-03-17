@@ -171,6 +171,7 @@ bool InsertYaneSDKHook();       // YaneSDK: arc/evimage.dat
 bool InsertBishopHook();        // Bishop: *.bsa
 bool InsertOtomeHook();         // Otome: fsroot*
 bool InsertTrianglePixHook();   // Triangle Pix: pix.bin
+bool InsertISMscriptHooks();    // ISM script Engine: ism.dll
 
 bool InsertAnimHook(); //
 bool InsertAnim2Hook(); //

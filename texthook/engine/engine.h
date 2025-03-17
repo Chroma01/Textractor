@@ -192,6 +192,7 @@ bool InsertAtelierGSHooks();    // Atelier GAME_SYS: game_sys.exe, resource stri
 bool InsertAtelierADV10Hook();  // Atelier ADV10: ADV10.EXE, resource string
 bool InsertAquaplusHooks();     // Aquaplus: Data/*.pck
 bool InsertCielHooks();          // Ciel: sys/kidoku.dat
+bool InsertA98sysHook();        // A98sys: A98SYS.PAK
 
 // CIRCUS: avdata/
 bool InsertCircusHook1();

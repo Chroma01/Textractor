@@ -41,6 +41,7 @@ foreach ($language in @{
 			copy -Force -Recurse -Verbose -Destination "$folder/$arch" -Path "Release_$arch/$file";
 		}
 		foreach ($extension in @(
+		    "Aliyun Translate"
 			"Bing Translate",
 			"Bing Translate2",
 			"Copy to Clipboard",
@@ -62,6 +63,7 @@ foreach ($language in @{
 			"Replacer",
 			"Styler",
 			"Thread Linker"
+			"Translate Bridge"
 		))
 		{
 			copy -Force -Recurse -Verbose -Destination "$folder/$arch/$extension.xdll" -Path "Release_$arch/$extension.dll";

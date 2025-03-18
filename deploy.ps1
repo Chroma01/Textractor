@@ -65,6 +65,7 @@ foreach ($language in @{
 			"Replacer",
 			"Replacer Language Chars",
 			"Replacer Process Hooked",
+			"Replacer Translated Text",
 			"Styler",
 			"Thread Linker"
 			"Translate Bridge"

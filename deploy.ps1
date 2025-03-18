@@ -69,6 +69,7 @@ foreach ($language in @{
 			"Styler",
 			"Thread Linker"
 			"Translate Bridge"
+			"Yandex Translate"
 		))
 		{
 			copy -Force -Recurse -Verbose -Destination "$folder/$arch/$extension.xdll" -Path "Release_$arch/$extension.dll";

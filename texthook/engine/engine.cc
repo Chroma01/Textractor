@@ -26605,19 +26605,73 @@ bool InsertA98sysHook()
 
   ULONG range = min(processStopAddress - processStartAddress, MAX_REL_ADDR);
   ULONG addr = MemDbg::findBytes(bytes, sizeof(bytes), processStartAddress, processStartAddress + range);
-  if (!addr) {
-    ConsoleOutput("vnreng:A98sys: pattern not found");
-    return false;
+  if (addr) {
+    HookParam hp = {};
+    hp.address = addr;
+    hp.offset = pusha_ecx_off -4;
+    hp.index = 0;
+    hp.type = USING_STRING;
+    ConsoleOutput("vnreng: INSERT A98sys");
+    NewHook(hp, "A98sys");
+    return true;
   }
 
-  HookParam hp = {};
-  hp.address = addr;
-  hp.offset = pusha_ecx_off -4;
-  hp.index = 0;
-  hp.type = USING_STRING;
-  ConsoleOutput("vnreng: INSERT A98sys");
-  NewHook(hp, "A98sys");
-  return true;
+  //By Chenx221
+  //Tested: https://vndb.org/v1030 Bible Black -The Infection-
+//00427590 | 83EC 10            | sub esp,10                               |  <--hook
+//00427593 | 53                 | push ebx                                 |
+//00427594 | 55                 | push ebp                                 |
+//00427595 | 8B6C24 1C          | mov ebp,dword ptr ss:[esp+1C]            | [esp+1C]:"赛u"
+//00427599 | 8B5C24 24          | mov ebx,dword ptr ss:[esp+24]            |
+//HS932#4:-C@27590:BB_INFECTION.EXE
+//const BYTE bytes2[] = {
+//    0x83, 0xEC, 0x10,        // sub esp,10
+//    0x53,                    // push ebx
+//    0x55,                    // push ebp
+//    0x8B, 0x6C, 0x24, 0x1C,  // mov ebp,dword ptr ss:[esp+1C]
+//    0x8B, 0x5C, 0x24, 0x24   // mov ebx,dword ptr ss:[esp+24]
+//};
+//00412C9F | 90                 | nop                                      |
+//00412CA0 | A1 788D5200        | mov eax,dword ptr ds:[528D78]            | <--hook
+//00412CA5 | 8B0D 808D5200      | mov ecx,dword ptr ds:[528D80]            |
+//00412CAB | 8B15 C8DB5200      | mov edx,dword ptr ds:[52DBC8]            |
+//00412CB1 | 03C8               | add ecx,eax                              |
+//HSN932#4@12CA0:BB_INFECTION.EXE
+const BYTE bytes3[] = {
+    0x90,                    // nop
+    0xA1, XX4,               // mov eax, dword ptr ds:[528D78] // <--
+    0x8B, 0x0D, XX4,         // mov ecx, dword ptr ds:[528D80]
+    0x8B, 0x15, XX4,         // mov edx, dword ptr ds:[52DBC8]
+    0x03, 0xC8               // add ecx, eax
+};
+
+  addr = MemDbg::findBytes(bytes3, sizeof(bytes3), processStartAddress, processStartAddress + range);
+  if (addr) {
+    HookParam hp = {};
+    hp.address = addr+1;
+    hp.offset = 0x4;
+    hp.index = 0;
+    hp.type = USING_STRING | NO_CONTEXT;
+    hp.filter_fun = [](LPVOID data, DWORD* size, HookParam*, BYTE)
+    {//Got a problem? Fix it after it crashes.
+      auto text = reinterpret_cast<LPSTR>(data);
+      auto len = reinterpret_cast<DWORD*>(size);
+      if (*len > 0) {
+        text[*len] = ' ';
+        text[*len + 1] = '\0';
+        (*len)++;
+      }
+      return true;
+    };
+    ConsoleOutput("vnreng: INSERT A98sys");
+    ConsoleOutput("Tips: Don't forget to maximize the game text speed.");
+    NewHook(hp, "A98sys");
+    return true;
+  }
+
+
+  ConsoleOutput("vnreng:A98sys: pattern not found");
+  return false;
 }
 
 bool InsertOtomeHook()

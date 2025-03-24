@@ -11903,6 +11903,114 @@ static bool InsertWillPlus6()
   return true;
 }
 
+static bool InsertWillPlus7()
+{
+  //by Chenx221
+  /*
+  * 1.9.9.15, 1.9.9.14, 1.9.9.12, 1.9.9.9, 1.9.9.8, 1.9.9.4, 1.9.7.3
+  */
+const BYTE bytes[] = {
+    0x55,                               // push ebp   <-- hook here
+    0x8B, 0xEC,                         // mov ebp,esp
+    0x83, 0xE4, 0xF8,                   // and esp,FFFFFFF8
+    0x81, 0xEC, 0x14, 0x01, 0x00, 0x00, // sub esp,114
+    0xA1, XX4,       // mov eax,dword ptr ds:[5CD040]
+    0x33, 0xC4,                         // xor eax,esp
+    0x89, 0x84, 0x24, 0x10, 0x01, 0x00, 0x00, // mov dword ptr ss:[esp+110],eax
+    0x53,                               // push ebx
+    0x8B, 0x5D, 0x08,                   // mov ebx,dword ptr ss:[ebp+8]
+    0x56,                               // push esi
+    0x8B, 0xF2,                         // mov esi,edx
+    0x89, 0x4C, 0x24, 0x0C,             // mov dword ptr ss:[esp+C],ecx
+    0x57,                               // push edi
+    0x8B, 0x7D, 0x0C,                   // mov edi,dword ptr ss:[ebp+C]
+    0x3B, 0xDE,                         // cmp ebx,esi
+    0x73, 0x72,                         // jae advhd.4067AF
+    0x68, 0x00, 0x01, 0x00, 0x00,       // push 100
+    0x8D, 0x44, 0x24, 0x1C              // lea eax,dword ptr ss:[esp+1C]
+};
+  ULONG range = min(processStopAddress - processStartAddress, MAX_REL_ADDR);
+  ULONG addr = MemDbg::findBytes(bytes, sizeof(bytes), processStartAddress, processStartAddress + range);
+  if (!addr) {
+    ConsoleOutput("vnreng:WillPlus7: pattern not found");
+    return false;
+  }
+
+  HookParam hp = {};
+  hp.address = addr;
+  hp.offset = pusha_ecx_off -4;
+  hp.index = 0;
+  hp.type = USING_UNICODE | USING_STRING;
+  ConsoleOutput("vnreng: INSERT WillPlus7");
+  NewHook(hp, "WillPlus7");
+  return true;
+}
+
+static bool InsertWillPlus8()
+{
+  //This seems somewhat similar to the previously commented-out WillPlus2 code, but my search pattern appears to be more effective. :)
+  //by Chenx221
+  /*
+  * 1.9.9.15, 1.9.9.14, 1.9.9.12, 1.9.9.9, 1.9.9.8, 1.9.9.4, 1.9.7.3
+  */
+const BYTE bytes1[] = {
+    0x98,                               // cwde
+    0x89, XX,                         // mov dword ptr ds:[ebx],eax
+    0x8B, XX, 0x64,                   // mov eax,dword ptr ds:[edi+64]
+    0xE9, XX4,                   // jmp 1.9.7.3_4544347d_advhd.40CCCB
+    0x83, XX, 0x20,                   // cmp esi,20
+    0x74, XX,                         // je 1.9.7.3_4544347d_advhd.40CC9E
+    0x81, XX, 0x00, 0x30, 0x00, 0x00, // cmp esi,3000  // <--
+    0x74, XX,                         // je 1.9.7.3_4544347d_advhd.40CC9E
+    0x8B, XX, XX,                   // mov ecx,dword ptr ss:[ebp-58]
+    0x85, XX,                         // test ecx,ecx
+    0x74, XX,                         // je 1.9.7.3_4544347d_advhd.40CC7B
+    0xFF, 0x75, XX                    // push dword ptr ss:[ebp-50]
+};
+const BYTE bytes2[] = {
+    0x98,                               // cwde
+    0x89, XX,                         // mov dword ptr ds:[ebx],eax
+    0x8B, XX, 0x64,                   // mov eax,dword ptr ds:[edi+64]
+    0xE9, XX4,                   // jmp 1.9.7.3_4544347d_advhd.40CCCB
+    0x83, XX, 0x20,                   // cmp esi,20
+    0x74, XX,                         // je 1.9.7.3_4544347d_advhd.40CC9E
+    0x3D, 0x00, 0x30, 0x00, 0x00, // <--
+    0x74, XX,                         // je 1.9.7.3_4544347d_advhd.40CC9E
+    0x8B, XX, XX,                   // mov ecx,dword ptr ss:[ebp-58]
+    0x85, XX,                         // test ecx,ecx
+    0x74, XX,                         // je 1.9.7.3_4544347d_advhd.40CC7B
+    0xFF, 0x75, XX                    // push dword ptr ss:[ebp-50]
+};
+
+  ULONG range = min(processStopAddress - processStartAddress, MAX_REL_ADDR);
+  ULONG addr = MemDbg::findBytes(bytes1, sizeof(bytes1), processStartAddress, processStartAddress + range);
+  HookParam hp = {};
+  if (!addr) {
+     addr = MemDbg::findBytes(bytes2, sizeof(bytes2), processStartAddress, processStartAddress + range);
+     if (!addr) {
+       ConsoleOutput("vnreng:WillPlus8: pattern not found");
+       return false;
+     }
+     hp.offset = pusha_eax_off -4;
+  }else{
+    BYTE byte = *(BYTE*)(addr + 17);
+    if(byte >=0xf9 && byte <=0xff){
+       hp.offset = -12 - (byte-0xf9)*4;
+    }else{
+       ConsoleOutput("vnreng:WillPlus8: pattern not found");
+       return false;
+    }
+  }
+
+  hp.address = addr+16;
+  hp.index = 0;
+  hp.type = USING_UNICODE;
+  hp.length_offset = 1;
+  ConsoleOutput("vnreng: INSERT WillPlus8");
+  NewHook(hp, "WillPlus8");
+  return true;
+}
+
 } // unnamed namespace
 
 bool InsertWillPlusHook()
@@ -11911,6 +12019,8 @@ bool InsertWillPlusHook()
   ok = InsertWillPlus4() || ok;
   ok = InsertWillPlus5() || ok;
   ok = InsertWillPlus6() || ok;
+  ok = InsertWillPlus7() || ok;
+  ok = InsertWillPlus8() || ok;
   ok = InsertWillPlusWHook() || InsertWillPlusAHook() || ok;
   ok = InsertWillPlusExHook() || ok;
   ok = InsertNewWillPlusHook() || ok;

@@ -8547,6 +8547,77 @@ bool InsertTokyoNecroHook()
     return TokyoNecro::TextHook();
 }
 
+bool InsertNitroPlusNewHook() {
+  // By Chenx221
+  // Tested: https://vndb.org/r64727 & https://vndb.org/v13666
+  //
+
+  //0084DD9A | 53                 | push ebx                        |
+  //0084DD9B | 57                 | push edi                        |
+  //0084DD9C | 68 182D9400        | push saya_steam.942D18          | 942D18:"create"
+  //0084DDA1 | 68 80EA8400        | push <saya_steam.Create>        | <--
+  //0084DDA6 | 8BCE               | mov ecx,esi                     |
+  //0084DDA8 | E8 032D0000        | call saya_steam.850AB0          |
+  //0084DDAD | 53                 | push ebx                        |
+  //0084DDAE | 57                 | push edi                        |
+  //0084DDAF | 68 18239400        | push saya_steam.942318          | 942318:"link"
+  //0084DDB4 | 68 B0B18300        | push saya_steam.83B1B0          |
+  //0084DDB9 | 8BCE               | mov ecx,esi                     |
+  //0084DDBB | E8 902D0000        | call saya_steam.850B50          |
+  //0084DDC0 | 53                 | push ebx                        |
+  //0084DDC1 | 57                 | push edi                        |
+  //0084DDC2 | 68 FC459400        | push saya_steam.9445FC          | 9445FC:"print"
+  //0084DDC7 | 68 20EB8400        | push <saya_steam.Print>         | <--
+  //0084DDCC | 8BCE               | mov ecx,esi                     |
+  //0084DDCE | E8 7D2D0000        | call saya_steam.850B50          |
+
+  //Some games use both Create and Print for text simultaneously. You can try the Thread Linker.
+
+  const BYTE funNameCode1[] = {
+    0x00, 0x70, 0x72, 0x69, 0x6E, 0x74, 0x00 //print
+  };
+  const BYTE funNameCode2[] = {
+    0x00, 0x63, 0x72, 0x65, 0x61, 0x74, 0x65, 0x00 //create
+  };
+
+  ULONG addr1 = MemDbg::findBytes(funNameCode1, sizeof(funNameCode1), processStartAddress, processStopAddress);
+
+
+  int status = 0;
+
+  if (addr1) {
+    DWORD pushPrintAddr = MemDbg::findPushDwordAddress(addr1+1, processStartAddress, processStopAddress);
+    if (pushPrintAddr){
+      DWORD funaddr1 = *(DWORD *)(pushPrintAddr + 6);
+      status++;
+      HookParam hp = {};
+      hp.address = funaddr1;
+      hp.offset = pusha_eax_off - 4;;
+      hp.type = USING_STRING;
+      ConsoleOutput("Textractor: INSERT NitroPlusNewHook (Print)");
+      NewHook(hp, "NitroPlusNewHook_Print");
+
+      ULONG addr2 = MemDbg::findBytes(funNameCode2, sizeof(funNameCode2), processStartAddress, processStopAddress);
+      if (addr2) {
+        DWORD pushCreateAddr = MemDbg::findPushDwordAddress(addr2+1, pushPrintAddr-0x30, pushPrintAddr);
+        if (pushCreateAddr){
+          DWORD funaddr2 = *(DWORD *)(pushCreateAddr + 6);
+          status++;
+          HookParam hp = {};
+          hp.address = funaddr2;
+          hp.offset = pusha_eax_off - 4;;
+          hp.type = USING_STRING;
+          ConsoleOutput("Textractor: INSERT NitroPlusNewHook (Create)");
+          NewHook(hp, "NitroPlusNewHook_Create");
+        }
+      }
+    }
+  } else{
+    ConsoleOutput("Textractor:NitroPlusNewHook: function not found");
+  }
+  return status;
+}
+
 // jichi 6/21/2015
 namespace { // unnamed
 

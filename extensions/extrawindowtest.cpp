@@ -37,7 +37,6 @@ extern const char* TEXT_OUTLINE;
 extern const char* OUTLINE_COLOR;
 extern const char* OUTLINE_SIZE;
 extern const char* OUTLINE_SIZE_INFO;
-extern const char* FONT;
 extern const char* ORIGINAL_FONT = u8"OriginalFont";
 extern const char* TRANSLATED_FONT = u8"TranslatedFont";
 extern const char* TIMER_HIDE_TEXT;
@@ -75,17 +74,8 @@ struct PrettyWindow : QDialog, Localizer
 		settings.beginGroup(name);
 
 		QFont baseFont = ui.display->font();
-		if (baseFont.fromString(settings.value(FONT, baseFont.toString()).toString())) {
-			ui.display->setFont(baseFont);
-		} else {
-			baseFont = ui.display->font();
-		}
-
-		translatedFont = baseFont;
-		QString translatedFontStr = settings.value(TRANSLATED_FONT, translatedFont.toString()).toString();
-
-		originalFont = baseFont;
-		QString originalFontStr = settings.value(ORIGINAL_FONT, originalFont.toString()).toString();
+		translatedFont.fromString(settings.value(TRANSLATED_FONT, baseFont.toString()).toString());
+		originalFont.fromString(settings.value(ORIGINAL_FONT, baseFont.toString()).toString());
 
 		SetBackgroundColor(settings.value(BG_COLOR, backgroundColor).value<QColor>());
 		SetTextColor(settings.value(TEXT_COLOR, TextColor()).value<QColor>());
@@ -176,6 +166,15 @@ protected:
 		}
 	}
 
+	// void resizeEvent(QResizeEvent* event) override
+	// {
+	// 	QPainterPath path;
+	// 	path.addRoundedRect(rect(), 8, 8);
+	// 	setMask(QRegion(path.toFillPolygon(QTransform()).toPolygon()));
+	// 	QDialog::resizeEvent(event);
+	// }
+
+
 	QMenu menu{ ui.display };
 	Settings settings{ this };
 
@@ -263,7 +262,11 @@ private:
 
 	void paintEvent(QPaintEvent*) override
 	{
-		QPainter(this).fillRect(rect(), backgroundColor);
+		QPainter painter(this);
+		painter.setRenderHint(QPainter::Antialiasing);
+		QPainterPath path;
+		path.addRoundedRect(rect(), 16, 16);
+		painter.fillPath(path, backgroundColor);
 	}
 
 	QColor backgroundColor{ palette().window().color() };

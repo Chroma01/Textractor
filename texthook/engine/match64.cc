@@ -1344,6 +1344,29 @@ namespace Engine
 		ConsoleOutput("vnreng:Godot_x64: pattern not found");
 		return false;
 	}
+
+	bool InsertUnityIL2TMPHook() {
+		const BYTE bytes[] = {
+			0xCC, 0x48, 0x89, 0x5C, 0x24, 0x08, 0x57, 0x48, 0x83, 0xEC, 0x20, 0x80, 0xB9, 0xE8, 0x00, 0x00, 0x00, 0x00
+		};
+
+		HMODULE module = GetModuleHandleW(L"GameAssembly.dll");
+		auto [minAddress, maxAddress] = Util::QueryModuleLimits(module);
+		for (auto addr: Util::SearchMemory(bytes, sizeof(bytes), PAGE_EXECUTE, minAddress, maxAddress)) {
+			HookParam hp = {};
+			hp.address = addr + 1;
+			hp.type = USING_STRING | USING_UNICODE;
+			hp.offset = pusha_rdx_off - 4;
+			hp.padding = 0x14;
+			NewHook(hp, "TMPro_Text");
+			ConsoleOutput("Insert: Unity IL2cpp TMPro Text Hook");
+			return true;
+		}
+
+		ConsoleOutput("Textractor:UnityIL2TMPHook: pattern not found");
+		return false;
+	}
+
 	bool UnsafeDetermineEngineType()
 	{
 		if (Util::CheckFile(L"PPSSPP*.exe") && FindPPSSPP()) return true;
@@ -1359,6 +1382,7 @@ namespace Engine
 		if (GetModuleHandleW(L"GameAssembly.dll")) // TODO: is there a way to autofind hook?
 		{
 			ConsoleOutput("Textractor: Precompiled Unity found (searching for hooks should work)");
+			InsertUnityIL2TMPHook();
 			wcscpy_s(spDefault.boundaryModule, L"GameAssembly.dll");
 			spDefault.padding = 20;
 			return true;

@@ -433,7 +433,8 @@ bool DetermineEngineByFile3()
 
 bool DetermineEngineByFile4()
 {
-  if (Util::SearchResourceString(L"でぼの巣製作所") || Util::SearchResourceString(L"Debonosu Works")) {
+  if (Util::SearchResourceString(L"でぼの巣製作所") || Util::SearchResourceString(L"でぼの巣制作所") || Util::SearchResourceString(L"Debonosu Works")) {
+    // 你是故意的吗 製->制 // 神楽凌艶譚 ～沙月の章～
     if (InsertDebonosuWorksHook() || InsertDebonosuWorksNewHook())
       return true;
   }

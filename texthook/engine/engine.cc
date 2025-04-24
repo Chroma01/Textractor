@@ -1896,6 +1896,42 @@ bool InsertKiriKiriZHook6()
   return true;
 }
 
+bool InsertKiriKiriZHook6c()
+{
+  //by Chenx221
+  /*
+   * Sample games:
+   * https://vndb.org/v54776
+   */
+const BYTE bytes[] = {
+    0x8B, 0x45, 0xFC,               // mov eax, dword ptr [ebp-4] // すれ違う兄妹の壊れる倫理観.exe + 211197
+    0x8B, 0x7B, 0x68,               // mov edi, dword ptr [ebx+68]
+    0x8B, 0x5B, 0x64,               // mov ebx, dword ptr [ebx+64]
+    0x8B, 0x4D, 0x08,               // mov ecx, dword ptr [ebp+8]
+    0x8B, 0x40, 0x38,               // mov eax, dword ptr [eax+38]
+    0x41                            // inc ecx
+};
+
+
+  ULONG range = min(processStopAddress - processStartAddress, MAX_REL_ADDR);
+  ULONG addr = MemDbg::findBytes(bytes, sizeof(bytes), processStartAddress, processStartAddress + range);
+  if (!addr) {
+    ConsoleOutput("vnreng:KiriKiriZ6c: pattern not found");
+    return false;
+  }
+
+  HookParam hp = {};
+  hp.address = addr;
+  hp.offset = pusha_esi_off -4;
+  hp.split  = 19 * 4; //arg 19
+  hp.type =  USING_UNICODE | USING_STRING | USING_SPLIT | NO_CONTEXT;
+  hp.filter_fun = KiriKiriZ6Filter;
+  ConsoleOutput("vnreng: INSERT KiriKiriZ6c");
+  NewHook(hp, "KiriKiriZ6c");
+
+  return true;
+}
+
 } // unnamed namespace
 
 // jichi 1/30/2015: Do KiriKiriZ2 first, which might insert to the same location as KiriKiri1.
@@ -1906,6 +1942,7 @@ bool InsertKiriKiriZHook()
   ok = InsertKiriKiriZHook4() || ok;
   ok = InsertKiriKiriZHook5() || ok;
   ok = InsertKiriKiriZHook6() || ok;
+  ok = InsertKiriKiriZHook6c() || ok;
   return InsertKiriKiriZHook2() || InsertKiriKiriZHook1() || ok;
 }
 

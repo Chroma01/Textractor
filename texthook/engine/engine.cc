@@ -12082,11 +12082,38 @@ const BYTE bytes[] = {
     0x68, 0x00, 0x01, 0x00, 0x00,       // push 100
     0x8D, 0x44, 0x24, 0x1C              // lea eax,dword ptr ss:[esp+1C]
 };
+
+// のーぶる・バトラー 1.9.9.15 CRC32:3762FF83
+const BYTE bytes2[] = {
+    0x55,                               // push ebp
+    0x8B, 0xEC,                         // mov ebp, esp
+    0x83, 0xE4, 0xF8,                   // and esp, FFFFFF8
+    0x81, 0xEC, 0x14, 0x01, 0x00, 0x00, // sub esp, 114
+    0xA1, XX4,       // mov eax, dword ptr ds:[5CD040]
+    0x33, 0xC4,                         // xor eax, esp
+    0x89, 0x84, 0x24, 0x10, 0x01, 0x00, 0x00, // mov [esp+110], eax
+    0x8B, 0x45, 0x0C,                   // mov eax, [ebp+C]
+    0x53,                               // push ebx
+    0x56,                               // push esi
+    0x57,                               // push edi
+    0x8B, 0x7D, 0x08,                   // mov edi, [ebp+8]
+    0x8B, 0xF2,                         // mov esi, edx
+    0x89, 0x4C, 0x24, 0x0C,             // mov [esp+C], ecx
+    0x89, 0x44, 0x24, 0x10,             // mov [esp+10], eax
+    0x3B, 0xFE,                         // cmp edi, esi
+//    0x73, 0x7D,                         // jae addr
+//    0x68, 0x00, 0x01, 0x00, 0x00,       // push 100
+//    0x8D, 0x44, 0x24, 0x1C              // lea eax, [esp+1C]
+  };
+
   ULONG range = min(processStopAddress - processStartAddress, MAX_REL_ADDR);
   ULONG addr = MemDbg::findBytes(bytes, sizeof(bytes), processStartAddress, processStartAddress + range);
   if (!addr) {
-    ConsoleOutput("vnreng:WillPlus7: pattern not found");
-    return false;
+    addr = MemDbg::findBytes(bytes2, sizeof(bytes2), processStartAddress, processStartAddress + range);
+    if (!addr) {
+      ConsoleOutput("vnreng:WillPlus7: pattern not found (all)");
+      return false;
+    }
   }
 
   HookParam hp = {};

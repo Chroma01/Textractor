@@ -7398,6 +7398,34 @@ bool InsertWaffleHook()
       NewHook(hp, "WAFFLE3");
       found = true;
   }
+
+  // by Chenx221
+  // Tested: https://vndb.org/r128617 (FHD三件套)
+  /*
+kf3FHD.exe
+006990E8 | 6A 4C              | push 4C                               |
+006990EA | B8 1F297D00        | mov eax,kf3fhd.7D291F                 |
+006990EF | E8 437C1100        | call kf3fhd.7B0D37                    |
+006990F4 | 8BC1               | mov eax,ecx                           |
+006990F6 | 8945 C8            | mov dword ptr ss:[ebp-38],eax         |
+006990F9 | 8B7D 08            | mov edi,dword ptr ss:[ebp+8]          |
+   */
+  const BYTE bytes3[] = {
+    0x6A, 0x4C, 0xB8, XX4, 0xE8, XX4, 0x8B, 0xC1
+  };
+  if (DWORD addr = MemDbg::findBytes(bytes3, sizeof(bytes3), processStartAddress, processStartAddress + range))
+  {
+      HookParam hp = {};
+      hp.address = addr;
+      hp.length_offset = 1;
+      hp.offset = 4;
+      hp.index = 0x00;
+      hp.type = DATA_INDIRECT;
+      ConsoleOutput("Textractor: INSERT WAFFLE4"); // I suspect this is an old engine.
+      NewHook(hp, "WAFFLE4");
+      found = true;
+  }
+
   //ConsoleOutput("Probably Waffle. Wait for text.");
   if (!found) trigger_fun = InsertWaffleDynamicHook;
   return found;

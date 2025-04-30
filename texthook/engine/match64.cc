@@ -733,8 +733,117 @@ namespace Engine
 	  return InsertGodotHook2_X64();
 	}
 
+	bool LucaSystemFilter(LPVOID data, DWORD* size, HookParam*, BYTE) {
+		auto text = reinterpret_cast<LPWSTR>(data);
+		auto len = reinterpret_cast<size_t *>(size);
+
+		if (text[0] == L'\x3000') { //removes space at the beginning of the sentence
+			*len -= 2;
+			::memmove(text, text + 1, *len);
+		}
+
+		if ( *text == L'@' ) //Name in square brackets instead of '@'
+			if ( wchar_t *match2 = cpp_wcsnchr(text+1, L'@', *len/2-1) ) {
+				*text = L'[';
+				*match2 = L']';
+			}
+
+		WideStringFilterBetween(text, len, L"$C(", 3, L")", 1);
+		WideStringFilter(text, len, L"$A", 3); // remove $A followed by 1 char
+		WideStringCharReplacer(text, len, L"$d", 2, L'\n');
+		WideCharFilter(text, len, L'\xFF3F');
+		//ruby
+		WideStringFilter(text, len, L"$[", 2);
+		WideStringFilterBetween(text, len, L"$/", 2, L"$]", 2);
+
+		return true;
+	}
+
+	bool LucaSystemEnFilter(LPVOID data, DWORD* size, HookParam*, BYTE) {
+		auto text = reinterpret_cast<char*>(data);
+		auto len = reinterpret_cast<size_t*>(size);
+
+		StringCharReplacer(text, len, "\xE2\x9D\x9D", 3, '"');
+		StringCharReplacer(text, len, "\xE2\x9D\x9E", 3, '"');
+		StringCharReplacer(text, len, "\xE2\x9D\x9B", 3, '\'');
+		StringCharReplacer(text, len, "\xE2\x9D\x9C", 3, '\'');
+
+		return true;
+	}
+
+
 	bool InsertLucaSystemHook()
 	{
+		ULONG64 range = min(processStopAddress - processStartAddress, X64_MAX_REL_ADDR);
+
+		//by Chenx221
+		//适用于更新的LucaSystem引擎
+		/*
+		* Sample games:
+		* https://vndb.org/r132097
+		* https://vndb.org/r133677
+		*/
+		const BYTE bytes0[] = {
+			0xCC,                                  // int 3
+			0x48, XX4,								// mov qword ptr [rsp+20], rbx   <- hook here
+			0x55,                                  // push rbp
+			0x56,                                  // push rsi
+			0x57,                                  // push rdi
+			0x41, 0x54,                            // push r12
+			0x41, 0x55,                            // push r13
+			0x41, 0x56,                            // push r14
+			0x41, 0x57,                            // push r15
+			0x48, 0x8D, 0xAC, 0x24, XX4,			// lea rbp, [rsp-2050]
+			0xB8, XX4,								// mov eax, 2150
+			0xE8, XX4,								// call 0x00007FF71B020940
+			0x48, 0x2B, 0xE0,						// sub rsp, rax
+			0x48, 0x8B, 0x05, XX4,					// mov rax, qword ptr ds:[0x00007FF71B115040]
+			0x48, 0x33, 0xC4,						// xor rax, rsp
+			0x48, 0x89, 0x85, XX4,					// mov qword ptr ss:[rbp+0x2040], rax
+			0x41, 0x8B, 0xC0						// mov eax, r8d
+		};
+		const BYTE bytes1[] = {
+			0xCC,                                  // int 3
+			0x48, XX4,								// mov qword ptr [rsp+20], rbx   <- hook here
+			0x55,                                  // push rbp
+			0x56,                                  // push rsi
+			0x57,                                  // push rdi
+			0x41, 0x54,                            // push r12
+			0x41, 0x55,                            // push r13
+			0x41, 0x56,                            // push r14
+			0x41, 0x57,                            // push r15
+			0x48, 0x8D, 0xAC, 0x24, XX4,			// lea rbp, [rsp-2050]
+			0xB8, XX4,								// mov eax, 2150
+			0xE8, XX4,								// call 0x00007FF71B020940
+			0x48, 0x2B, 0xE0,						// sub rsp, rax
+			0x48, 0x8B, 0x05, XX4,					// mov rax, qword ptr ds:[0x00007FF71B115040]
+			0x48, 0x33, 0xC4,						// xor rax, rsp
+			0x48, 0x89, 0x85, XX4,					// mov qword ptr ss:[rbp+0x2040], rax
+			0x48, 0x8B, XX							// mov ???, rdx
+		};
+
+		for (auto addr : Util::SearchMemory(bytes0, sizeof(bytes0), PAGE_EXECUTE, processStartAddress, processStartAddress + range)) {
+			HookParam hp = {};
+			hp.address = addr + 1;
+			hp.offset = pusha_rdx_off -4; //RDX
+			hp.filter_fun = LucaSystemEnFilter;
+			hp.type = USING_UTF8 | USING_STRING | DATA_INDIRECT;
+			ConsoleOutput("vnreng: INSERT LucaSystemEN Hook ");
+			NewHook(hp, "LucaSystemNewEN");
+			break;
+		}
+		for (auto addr : Util::SearchMemory(bytes1, sizeof(bytes1), PAGE_EXECUTE, processStartAddress, processStartAddress + range)) {
+			HookParam hp = {};
+			hp.address = addr + 1;
+			hp.offset = pusha_rdx_off -4; //RDX
+			hp.filter_fun = LucaSystemFilter;
+			hp.split = -0x14 - 4; //RBX RCX RDI ok?
+			hp.type = USING_UNICODE | USING_STRING | DATA_INDIRECT | USING_SPLIT;
+			ConsoleOutput("vnreng: INSERT LucaSystem Hook (new)");
+			NewHook(hp, "LucaSystemNew");
+			break;
+		}
+
 		//by Blu3train
 		/*
 		* Sample games:
@@ -754,37 +863,11 @@ namespace Engine
 			0xB8, XX4                            // mov eax,00003910
 		};
 
-		ULONG64 range = min(processStopAddress - processStartAddress, X64_MAX_REL_ADDR);
 		for (auto addr : Util::SearchMemory(bytes, sizeof(bytes), PAGE_EXECUTE, processStartAddress, processStartAddress + range)) {
 			HookParam hp = {};
 			hp.address = addr + 1;
 			hp.offset = pusha_rdx_off -4; //RDX
-			hp.filter_fun = [](LPVOID data, DWORD *size, HookParam *, BYTE)
-			{
-				auto text = reinterpret_cast<LPWSTR>(data);
-				auto len = reinterpret_cast<size_t *>(size);
-
-				if (text[0] == L'\x3000') { //removes space at the beginning of the sentence
-					*len -= 2;
-					::memmove(text, text + 1, *len);
-				}
-
-				if ( *text == L'@' ) //Name in square brackets instead of '@'
-					if ( wchar_t *match2 = cpp_wcsnchr(text+1, L'@', *len/2-1) ) {
-						*text = L'[';
-						*match2 = L']';
-					}
-
-				WideStringFilterBetween(text, len, L"$C(", 3, L")", 1);
-				WideStringFilter(text, len, L"$A", 3); // remove $A followed by 1 char
-				WideStringCharReplacer(text, len, L"$d", 2, L'\n');
-				WideCharFilter(text, len, L'\xFF3F');
-				//ruby
-				WideStringFilter(text, len, L"$[", 2);
-				WideStringFilterBetween(text, len, L"$/", 2, L"$]", 2);
-
-				return true;
-			};
+			hp.filter_fun = LucaSystemFilter;
 			hp.type = USING_UNICODE | USING_STRING;
 			ConsoleOutput("vnreng: INSERT LucaSystem Hook ");
 			NewHook(hp, "LucaSystem");

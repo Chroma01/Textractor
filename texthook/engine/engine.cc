@@ -11286,7 +11286,7 @@ bool InsertWolf4Hook() {
   //3.x old&free
   //已测试: 3.06, 3.113, 3.191 官方DEMO
   const BYTE bytes0[] = {0x51, 0xB9, XX4, 0xE8, XX4, 0xC6, 0x45, XX2, 0x8B, 0x4D, XX, 0x83, 0xF9, 0x10, 0x72, XX};
-  ULONG range = min(processStopAddress - processStartAddress, MAX_REL_ADDR);
+  ULONG range = processStopAddress - processStartAddress;
   ULONG addr = MemDbg::findBytes(bytes0, sizeof(bytes0), processStartAddress, processStartAddress + range);
   if (!addr) {
     //3.x new&free

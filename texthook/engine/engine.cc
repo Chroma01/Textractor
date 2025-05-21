@@ -11280,13 +11280,50 @@ bool InsertWolf4Hook() {
     return true;
 }
 
+ bool InsertWolf5Hook() {
+  //By Chenx221
 
+  //3.x old&free
+  //已测试: 3.06, 3.113, 3.191 官方DEMO
+  const BYTE bytes0[] = {0x51, 0xB9, XX4, 0xE8, XX4, 0xC6, 0x45, XX2, 0x8B, 0x4D, XX, 0x83, 0xF9, 0x10, 0x72, XX};
+  ULONG range = min(processStopAddress - processStartAddress, MAX_REL_ADDR);
+  ULONG addr = MemDbg::findBytes(bytes0, sizeof(bytes0), processStartAddress, processStartAddress + range);
+  if (!addr) {
+    //3.x new&free
+    //已测试: 3.303, 3.396, 3.609 官方DEMO
+    const BYTE bytes1[] = {0x0F,0X47,0X45,XX,0XB9,XX4,0X50,0XE8,XX4,0X6A,0X00,0X68,XX4};
+    addr = MemDbg::findBytes(bytes1, sizeof(bytes1), processStartAddress, processStartAddress + range);
+    if (!addr) {
+      //3.x pro
+      //已测试: 3.191, 3.260
+      //妹！せいかつ～ファンタジー～ 1.4.x/2.0.1
+      const BYTE bytes2[] = {0X8D,0X45,XX,0XB9,XX4,0X50,0XE8,XX4,0X68,XX4};
+      addr = MemDbg::findBytes(bytes2, sizeof(bytes2), processStartAddress, processStartAddress + range);
+      if (!addr) {
+        ConsoleOutput("vnreng:WolfRPG: pattern5 not found");
+        return false;
+      }
+      addr+=14;
+    } else
+      addr+=17;
+  } else
+    addr+=21;
+  HookParam myhp = {};
+  myhp.address = addr;
+  myhp.type = USING_STRING | NO_CONTEXT | USING_UTF8 | DATA_INDIRECT;
+  myhp.offset = pusha_eax_off - 4;
+  myhp.index = 0;
+  NewHook(myhp, "WolfRPG5");
+  ConsoleOutput("Insert: WolfRPG5 Hook");
+  ConsoleOutput(R"(Tips: Use Regex Filter \x01\x02\x09([^,]+?),[^\]]+?\]|[\x00-\x09\x0B-\x0C\x0E-\x1F\x7F])");
+  return true;
+}
 
 } // WolfRPG namespace
 
 bool InsertWolfHook()
 {
-   return InsertOldWolfHook(), InsertWolf2Hook(), InsertWolf3Hook(), InsertWolf4Hook();
+   return InsertOldWolfHook(), InsertWolf2Hook(), InsertWolf3Hook(), InsertWolf4Hook(), InsertWolf5Hook();
 }
 
 bool InsertIGSDynamicHook(LPVOID addr, DWORD frame, DWORD stack)

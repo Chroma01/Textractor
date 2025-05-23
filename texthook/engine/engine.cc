@@ -27244,11 +27244,39 @@ bool InsertTrianglePixHook()
     0xFF, 0x75, 0x40           // push [ebp+40]
   };
 
+  //by Chenx221
+    /* for newer PIX
+    * Sample games:
+    * 魔法戦士EXTRA IGNITION https://vndb.org/v46785
+    * 魔法閃士フェアリーバレット https://vndb.org/v49570
+    * 幻聖剣姫セイクリッドアーク https://vndb.org/v52538
+    * 魔法戦士エクストラバースト～天使断罪～ (Trial) https://vndb.org/v55031
+    *
+    * 00CC4084 | 50                 | push eax                           | <--
+    * 00CC4085 | E8 6694DCFF        | call extraignition.A8D4F0          |
+    * 00CC408A | 8B87 A0DC0000      | mov eax,dword ptr ds:[edi+DCA0]    |
+    * 00CC4090 | 8D8D 7CFFFFFF      | lea ecx,dword ptr ss:[ebp-84]      |
+    * 00CC4096 | 837B 44 10         | cmp dword ptr ds:[ebx+44],10       |
+    * 00CC409A | FF73 40            | push dword ptr ds:[ebx+40]         |
+    */
+
+  const BYTE bytes2[] = {
+    0x50,
+    0xE8, XX4,
+    0x8B, 0x87, XX4,
+    0x8D, 0x8D, XX4,
+    0x83, 0x7B, 0x44, XX,
+    0xFF, 0x73, 0x40
+  };
+
   ULONG range = min(processStopAddress - processStartAddress, MAX_REL_ADDR);
   ULONG addr = MemDbg::findBytes(bytes, sizeof(bytes), processStartAddress, processStartAddress + range);
   if (!addr) {
-    ConsoleOutput("vnreng:TrianglePix: pattern not found");
-    return false;
+    addr = MemDbg::findBytes(bytes2, sizeof(bytes2), processStartAddress, processStartAddress + range);
+      if (!addr) {
+        ConsoleOutput("vnreng:TrianglePix: pattern not found");
+        return false;
+      }
   }
 
   HookParam hp = {};

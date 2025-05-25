@@ -1450,6 +1450,38 @@ namespace Engine
 		return false;
 	}
 
+	bool InsertSakanaGLHook() {
+		//by Chenx221
+		/*
+		* 需要更多测试
+		* Sample games:
+		* https://vndb.org/v55020 猫猫旅行社 ももいろ町おこしプロジェクト！ // 国产游戏?
+		*/
+		const BYTE bytes[] = {
+			0x4C, XX, XX, // mov r15,rax
+			0x48, XX2, XX, // lea rsi,qword ptr ds:[rbx+30]
+			0x85, 0xED, // test ebp,ebp					 <-- rsi
+			0x0F, 0x8E, XX4 // jle sakanagl.7FFE8DAC711D
+		};
+		HMODULE module = GetModuleHandleW(L"sakanagl.dll");
+		auto [minAddress, maxAddress] = Util::QueryModuleLimits(module);
+		for (auto addr: Util::SearchMemory(bytes, sizeof(bytes), PAGE_EXECUTE, minAddress, maxAddress)) {
+			HookParam hp = {};
+			hp.address = addr + 7;
+			hp.offset = pusha_rsi_off - 4;
+			hp.index = 0;
+			hp.split = pusha_r12_off - 4;
+			hp.type = USING_UTF8 | USING_STRING | USING_SPLIT | NO_CONTEXT;
+			ConsoleOutput("vnreng: INSERT SakanaGL x64");
+			NewHook(hp, "SakanaGL_x64");
+
+			return true;
+		}
+
+		ConsoleOutput("vnreng:SakanaGL x64: pattern not found");
+		return false;
+	}
+
 	bool UnsafeDetermineEngineType()
 	{
 		if (Util::CheckFile(L"PPSSPP*.exe") && FindPPSSPP()) return true;
@@ -1493,6 +1525,11 @@ namespace Engine
 			InsertRenpy3Hook();
 			InsertRenpy3NewHook();
 			return true;
+		}
+
+		if (Util::CheckFile(L"sakanagl.dll")) {
+			if (InsertSakanaGLHook())
+				return true;
 		}
 
 		for (const wchar_t* monoName : { L"mono.dll", L"mono-2.0-bdwgc.dll" }) if (HMODULE module = GetModuleHandleW(monoName)) if (InsertMonoHooks(module)) return true;

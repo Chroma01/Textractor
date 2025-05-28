@@ -8,6 +8,7 @@
 #include "attachprocessdialog.h"
 #include <shellapi.h>
 #include <process.h>
+#include <qcryptographichash.h>
 #include <QRegularExpression>
 #include <QStringListModel>
 #include <QScrollBar>
@@ -16,6 +17,7 @@
 #include <QFileDialog>
 #include <QFontDialog>
 #include <QHash>
+#include "../extensions/network.h"
 
 extern const char* ATTACH;
 extern const char* LAUNCH;
@@ -79,11 +81,13 @@ namespace
 
 	enum LaunchWithJapaneseLocale { PROMPT, ALWAYS, NEVER };
 
+	const char* CHECK_UPDATE = u8"Check for texthook updates on startup";
+
 	Ui::MainWindow ui;
 	std::atomic<DWORD> selectedProcessId = 0;
 	ExtenWindow* extenWindow = nullptr;
 	std::unordered_set<DWORD> alreadyAttached;
-	bool autoAttach = false, autoAttachSavedOnly = true;
+	bool autoAttach = false, autoAttachSavedOnly = true, checkUpdate = false;
 	bool showSystemProcesses = false;
 	uint64_t savedThreadCtx = 0, savedThreadCtx2 = 0;
 	wchar_t savedThreadCode[1000] = {};
@@ -496,6 +500,7 @@ namespace
 			{ TextThread::filterRepetition, FILTER_REPETITION },
 			{ autoAttach, AUTO_ATTACH },
 			{ autoAttachSavedOnly, ATTACH_SAVED_ONLY },
+			{checkUpdate,CHECK_UPDATE},
 			{ showSystemProcesses, SHOW_SYSTEM_PROCESSES },
 			{ TextThread::flushDelaySpacing, FLUSH_DELAY_SPACING },
 		})
@@ -631,6 +636,49 @@ namespace
 	{
 		if (!(QApplication::mouseButtons() & Qt::LeftButton)) ui.textOutput->copy();
 	}
+
+	void CheckForUpdates()
+	{
+		QString dllPath = QCoreApplication::applicationDirPath() + "/texthook.dll";
+		QFile file(dllPath);
+
+		Host::AddConsoleOutput(L"Checking for updates...");
+
+		if (!file.open(QIODevice::ReadOnly)) {
+			Host::AddConsoleOutput(L"Failed to open texthook.dll. Where's my texthook.dll?");
+			return;
+		}
+
+		QByteArray fileData = file.readAll();
+		QByteArray hash = QCryptographicHash::hash(fileData, QCryptographicHash::Sha256);
+		QString sha256 = hash.toHex();
+
+		if (HttpRequest httpRequest{
+			L"Textractor",
+			L"api.iloli.one",
+			L"GET",
+			FormatString(L"/checkUpdate?sha256=%S", sha256.toStdString()).c_str(),
+		}) {
+			auto response = JSON::Parse(httpRequest.response);
+
+			if (response[L"error"]) {
+				Host::AddConsoleOutput(FormatString(L"%s",response[L"error"].String()));
+				return;
+			}
+			if (response[L"update"].Boolean()) {
+				if ( *response[L"update"].Boolean()) {
+					Host::AddConsoleOutput(FormatString(L"Texthook update found!\nCurrent: %s, New: %s\nDownload: %s",
+													response[L"current_release_date"].String()->c_str(), response[L"release_date"].String()->c_str(),
+													response[L"download_url"].String()->c_str()));
+				}
+				else {
+					Host::AddConsoleOutput(L"Texthook is up to date.");
+				}
+			} else
+				Host::AddConsoleOutput(L"Unexpected response from update server. Maybe my server already exploded?\n"
+						   "Try visiting the update server in an external browser to see what's happening: https://api.iloli.one");
+		}
+	}
 }
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
@@ -669,6 +717,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 	TextThread::filterRepetition = settings.value(FILTER_REPETITION, TextThread::filterRepetition).toBool();
 	autoAttach = settings.value(AUTO_ATTACH, autoAttach).toBool();
 	autoAttachSavedOnly = settings.value(ATTACH_SAVED_ONLY, autoAttachSavedOnly).toBool();
+	checkUpdate = settings.value(CHECK_UPDATE, checkUpdate).toBool();
 	showSystemProcesses = settings.value(SHOW_SYSTEM_PROCESSES, showSystemProcesses).toBool();
 	TextThread::flushDelaySpacing = settings.value(FLUSH_DELAY_SPACING, TextThread::flushDelaySpacing).toBool();
 	TextThread::flushDelay = settings.value(FLUSH_DELAY, TextThread::flushDelay).toInt();
@@ -680,6 +729,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 	Host::Start(ProcessConnected, ProcessDisconnected, ThreadAdded, ThreadRemoved, SentenceReceived);
 	current = &Host::GetThread(Host::console);
 	Host::AddConsoleOutput(ABOUT);
+	if (checkUpdate) CheckForUpdates();
 
 	AttachConsole(ATTACH_PARENT_PROCESS);
 	WriteConsoleW(GetStdHandle(STD_OUTPUT_HANDLE), CL_OPTIONS, wcslen(CL_OPTIONS), DUMMY, NULL);

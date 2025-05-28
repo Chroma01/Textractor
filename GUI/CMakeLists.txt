@@ -6,6 +6,7 @@ add_executable(Textractor WIN32
 	attachprocessdialog.cpp
 	Textractor.rc
 	Textractor.ico
+		../extensions/network.cpp
 )
 target_precompile_headers(Textractor REUSE_FROM pch)
 target_link_libraries(Textractor host Qt5::Widgets Qt5::WinExtras shell32 winhttp)

@@ -20889,8 +20889,11 @@ bool InsertMonoHooksByAssembly(HMODULE module) {
 void InsertMonoHook(HMODULE h)
 {
 	static HMODULE mono = h;
-    if (InsertMonoHooksByAssembly(mono))
-        return ;
+	  if (!Util::CheckFile(L"TextractorConfig.txt")){
+	      ConsoleOutput("Mono_X86: If the following hooks don't work, create the TextractorConfig.txt file via the \"Configure game\" button to activate the brute force mode");
+	      if (InsertMonoHooksByAssembly(mono))
+            return ;
+	  }
 	/* Artikash 2/13/2019:
 	How to hook Mono/Unity3D:
 	Find all standard function prologs in memory with write/execute permission: these represent possible JIT compiled functions

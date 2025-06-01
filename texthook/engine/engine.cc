@@ -1860,6 +1860,17 @@ bool KiriKiriZ6Filter(LPVOID data, DWORD *size, HookParam *, BYTE)
     WideStringFilterBetween(text, len, L"$c:", 3, L";", 1);
     WideStringFilter(text, len, L"$c;", 3);
   }
+  if (cpp_wcsnstr(text, L"$s:", *len/sizeof(wchar_t))){
+    WideStringFilterBetween(text, len, L"$s:", 3, L";", 1);
+    WideStringFilter(text, len, L"$sd;", 4);
+  }
+  if (cpp_wcsnstr(text, L"$m:", *len/sizeof(wchar_t))){
+    WideStringFilterBetween(text, len, L"$m:", 3, L";", 1);
+    WideStringFilter(text, len, L"$mn;", 4);
+  }
+  if (cpp_wcsnstr(text, L"$g:", *len/sizeof(wchar_t))){
+    WideStringFilterBetween(text, len, L"$g:", 3, L";", 1);
+  }
 
   return true;
 }

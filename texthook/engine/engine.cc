@@ -20354,6 +20354,39 @@ bool InsertLovaGameHook()
  *  0f8f0508  |. c9            leave
  *  0f8f0509  \. c3            retn
  */
+
+bool InsertISMHook()
+{
+  // By Chenx221
+  // Tested game: Sisters: Last Day of Summer (Steam)(CHS/CHT)
+  // Sample ism.dll: https://beta.chenx221.cyou/s/gtDFGKpH7QKN5MD
+  // Due to the lack of testing with other games, I can't guarantee this will work elsewhere.
+
+  const BYTE bytes[] = {
+    0x8B, 0xCE,       // mov ecx,esi
+    0xE8, XX4,        // call ism.7C0AFBE9  // hook here edx
+    0x83, 0xC7, 0x04, // add edi,4
+    0xEB, XX          // jmp ism.7C0AF865
+  };
+
+  HMODULE module = GetModuleHandleW(L"ism.dll");
+	auto [minAddress, maxAddress] = Util::QueryModuleLimits(module);
+	ULONG addr = MemDbg::findBytes(bytes, sizeof(bytes), minAddress, maxAddress);
+	if (!addr) {
+		ConsoleOutput("vnreng:ISM: pattern not found");
+		return false;
+	}
+
+	HookParam hp = {};
+	hp.address = addr + 2;
+	hp.offset = pusha_edx_off -4;
+	hp.type = USING_UNICODE | NO_CONTEXT;
+	hp.length_offset = 1;
+	ConsoleOutput("vnreng: INSERT ISM");
+	NewHook(hp, "ISM");
+	return true;
+}
+
 bool InsertAdobeAirHook()
 {
   DWORD base = (DWORD)GetModuleHandleW(L"Adobe AIR.dll");

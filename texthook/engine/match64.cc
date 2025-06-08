@@ -1498,6 +1498,8 @@ namespace Engine
 		* 17.0.1 ja_DEMO
 		* 16.9.3 kr_DEMO
 		* 16.9.2 ユニゾンコード Trial
+		* Sample:
+		* https://beta.chenx221.cyou/s/bfke6rEGM2tw4WK
 		*/
 
 		// 00007FF6A7CB0920 | 49:C7C1 FFFFFFFF         | mov r9,FFFFFFFFFFFFFFFF          |
@@ -1538,6 +1540,8 @@ namespace Engine
 		* Tested on:
 		* 16.8.0-t10 プトリカ 1st.cut:The Reason She Must Perish https://vndb.org/v49261
 		* 16.7.1 en_DEMO
+		* Sample:
+		* https://beta.chenx221.cyou/s/6NMyMRAze7wiNqK
 		*/
 
 		// 00007FF7DEF91499 | 48:83C1 02               | add rcx,2                        |

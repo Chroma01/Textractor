@@ -290,6 +290,14 @@ namespace { // unnamed helpers
 		str[*size] = '\0';
 	}
 
+	void RegexReplacerW(wchar_t* str, size_t* size, const std::wregex& pattern, const std::wstring& replacement) {
+		std::wstring s(str, *size / sizeof(wchar_t));
+		s = std::regex_replace(s, pattern, replacement);
+		*size = s.size() * sizeof(wchar_t);
+		std::memcpy(str, s.c_str(), *size);
+		str[s.size()] = L'\0';
+	}
+
 	bool NewLineCharFilter(LPVOID data, DWORD* size, HookParam*, BYTE)
 	{
 		CharFilter(reinterpret_cast<LPSTR>(data), reinterpret_cast<size_t*>(size),
@@ -1482,6 +1490,92 @@ namespace Engine
 		return false;
 	}
 
+	bool InsertLightVNHook() {
+		// by Chenx221
+		/*
+		* Newer version
+		* Tested on:
+		* 17.0.1 ja_DEMO
+		* 16.9.3 kr_DEMO
+		* 16.9.2 ユニゾンコード Trial
+		*/
+
+		// 00007FF6A7CB0920 | 49:C7C1 FFFFFFFF         | mov r9,FFFFFFFFFFFFFFFF          |
+		// 00007FF6A7CB0927 | E8 649CB8FF              | call lightapp.7FF6A783A590       |
+		// 00007FF6A7CB092C | C785 5C010000 0C000000   | mov dword ptr ss:[rbp+15C],C     | hook here rdx 《--
+
+		const BYTE bytes[] = { 0x49, 0xC7, 0xC1, XX4, 0xE8, XX4, 0xC7, 0x85, XX4, 0x0C, XX2, XX};
+		ULONG64 range = min(processStopAddress - processStartAddress, X64_MAX_REL_ADDR);
+		for (auto addr : Util::SearchMemory(bytes, sizeof(bytes), PAGE_EXECUTE, processStartAddress, processStartAddress + range)) {
+			HookParam hp = {};
+			hp.address = addr + 12;
+			hp.type = USING_STRING | USING_UNICODE | NO_CONTEXT;
+			hp.offset = pusha_rdx_off - 4;
+			hp.filter_fun = [](LPVOID data, DWORD* size, HookParam*, BYTE)
+			{
+				auto text = reinterpret_cast<LPWSTR>(data);
+				auto len =  static_cast<size_t>(*size);
+
+				if (len == 0)
+					return false;
+				if (text[0] == L'\x2E')
+					text[0] = L' '; //这对英语用户友好，但对其他语言用户而言是多余的
+				if (cpp_wcsnstr(text, L"<", len/sizeof(wchar_t))) {
+					WideStringFilterBetween(text, &len, L"<", 1, L">", 1); // remove <...>
+				}
+				WideStringFilter(text, &len, L"\\n", 2);
+				WideStringFilter(text, &len, L"\\w", 2);
+				*size = static_cast<DWORD>(len);
+				return true;
+			};
+			NewHook(hp, "Light.vn");
+			ConsoleOutput("Insert: Light.vn Hook");
+			return true;
+		}
+
+		/*
+		* Old version
+		* Tested on:
+		* 16.8.0-t10 プトリカ 1st.cut:The Reason She Must Perish https://vndb.org/v49261
+		* 16.7.1 en_DEMO
+		*/
+
+		// 00007FF7DEF91499 | 48:83C1 02               | add rcx,2                        |
+		// 00007FF7DEF9149D | EB E1                    | jmp putrika1st.7FF7DEF91480      |
+		// 00007FF7DEF9149F | 49:63CD                  | movsxd rcx,r13d                  | hook here rax
+
+		const BYTE bytes2[] = { 0x48, XX2, XX, 0xEB, XX, 0x49, 0x63, 0xCD};
+		for (auto addr2 : Util::SearchMemory(bytes2, sizeof(bytes2), PAGE_EXECUTE, processStartAddress, processStartAddress + range)) {
+			HookParam hp = {};
+			hp.address = addr2 + 6;
+			hp.type = USING_STRING | USING_UNICODE | NO_CONTEXT;
+			hp.offset = pusha_rax_off - 4;
+			hp.filter_fun = [](LPVOID data, DWORD* size, HookParam*, BYTE)
+			{
+				auto text = reinterpret_cast<LPWSTR>(data);
+				auto len =  static_cast<size_t>(*size);
+
+				if (len == 0)
+					return false;
+				if (text[0] == L'\x2E')
+					text[0] = L' ';
+				if (cpp_wcsnstr(text, L"<", len/sizeof(wchar_t))) {
+					WideStringFilterBetween(text, &len, L"<", 1, L">", 1); // remove <...>
+				}
+				WideStringFilter(text, &len, L"\\n", 2);
+				WideStringFilter(text, &len, L"\\w", 2);
+				*size = static_cast<DWORD>(len);
+				return true;
+			};
+			NewHook(hp, "Light.vn");
+			ConsoleOutput("Insert: Light.vn Hook");
+			return true;
+		}
+
+		ConsoleOutput("vnreng:Light.vn: pattern not found");
+		return false;
+	}
+
 	bool UnsafeDetermineEngineType()
 	{
 		if (Util::CheckFile(L"PPSSPP*.exe") && FindPPSSPP()) return true;
@@ -1529,6 +1623,12 @@ namespace Engine
 
 		if (Util::CheckFile(L"sakanagl.dll")) {
 			if (InsertSakanaGLHook())
+				return true;
+		}
+
+		// 也许有更好的检测方法
+		if (Util::CheckFile(L"LightTests.exe")|Util::CheckFile(L"BugTrap.dll")) {
+			if (InsertLightVNHook())
 				return true;
 		}
 

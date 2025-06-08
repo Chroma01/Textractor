@@ -678,23 +678,23 @@ namespace Engine
 					{
 						static std::wstring prevText;
 						auto text = reinterpret_cast<LPWSTR>(data);
-						auto len = reinterpret_cast<size_t*>(size);
+						auto len =  static_cast<size_t>(*size);
 
-						if (cpp_wcsnstr(text, L"%", *len / sizeof(wchar_t)))
+						if (cpp_wcsnstr(text, L"%", len / sizeof(wchar_t)))
 							return false;
 
-						if (cpp_wcsnstr(text, L"{", *len / sizeof(wchar_t))) {
-							WideStringCharReplacer(text, len, L"{i}", 3, L'\'');
-							WideStringCharReplacer(text, len, L"{/i}", 4, L'\'');
-							WideStringFilterBetween(text, len, L"{", 1, L"}", 1);
+						if (cpp_wcsnstr(text, L"{", len / sizeof(wchar_t))) {
+							WideStringCharReplacer(text, &len, L"{i}", 3, L'\'');
+							WideStringCharReplacer(text, &len, L"{/i}", 4, L'\'');
+							WideStringFilterBetween(text, &len, L"{", 1, L"}", 1);
 						}
-						WideStringFilter(text, len, L"^", 2); // remove ^ followed by 1 char
-						WideCharReplacer(text, len, L'\n', L' ');
+						WideStringFilter(text, &len, L"^", 2); // remove ^ followed by 1 char
+						WideCharReplacer(text, &len, L'\n', L' ');
 
-						if (prevText.length() == *len / sizeof(wchar_t) && prevText.find(text, 0, *len / sizeof(wchar_t)) != std::string::npos) // Check if the string is the same as the previous one
+						if (prevText.length() == len / sizeof(wchar_t) && prevText.find(text, 0, len / sizeof(wchar_t)) != std::string::npos) // Check if the string is the same as the previous one
 							return false;
-						prevText.assign(text, *len / sizeof(wchar_t));
-
+						prevText.assign(text, len / sizeof(wchar_t));
+						*size = static_cast<DWORD>(len);
 						return true;
 					};
 					NewHook(hp, "Ren'py");
@@ -769,13 +769,13 @@ namespace Engine
 
 	bool LucaSystemEnFilter(LPVOID data, DWORD* size, HookParam*, BYTE) {
 		auto text = reinterpret_cast<char*>(data);
-		auto len = reinterpret_cast<size_t*>(size);
+		auto len =  static_cast<size_t>(*size);
 
-		StringCharReplacer(text, len, "\xE2\x9D\x9D", 3, '"');
-		StringCharReplacer(text, len, "\xE2\x9D\x9E", 3, '"');
-		StringCharReplacer(text, len, "\xE2\x9D\x9B", 3, '\'');
-		StringCharReplacer(text, len, "\xE2\x9D\x9C", 3, '\'');
-
+		StringCharReplacer(text, &len, "\xE2\x9D\x9D", 3, '"');
+		StringCharReplacer(text, &len, "\xE2\x9D\x9E", 3, '"');
+		StringCharReplacer(text, &len, "\xE2\x9D\x9B", 3, '\'');
+		StringCharReplacer(text, &len, "\xE2\x9D\x9C", 3, '\'');
+		*size = static_cast<DWORD>(len);
 		return true;
 	}
 
@@ -1219,20 +1219,20 @@ namespace Engine
 					hp.filter_fun = [](LPVOID data, DWORD* size, HookParam*, BYTE)
 					{
 						auto text = reinterpret_cast<LPWSTR>(data);
-						auto len = reinterpret_cast<size_t*>(size);
+						auto len =  static_cast<size_t>(*size);
 
-						if (cpp_wcsnstr(text, L"%", *len / sizeof(wchar_t)))
+						if (cpp_wcsnstr(text, L"%", len / sizeof(wchar_t)))
 							return false;
-						if (cpp_wcsnstr(text, L"{", *len / sizeof(wchar_t))) {
-							WideStringCharReplacer(text, len, L"{i}", 3, L'\'');
-							WideStringCharReplacer(text, len, L"{/i}", 4, L'\'');
-							WideStringFilterBetween(text, len, L"{", 1, L"}", 1);
+						if (cpp_wcsnstr(text, L"{", len / sizeof(wchar_t))) {
+							WideStringCharReplacer(text, &len, L"{i}", 3, L'\'');
+							WideStringCharReplacer(text, &len, L"{/i}", 4, L'\'');
+							WideStringFilterBetween(text, &len, L"{", 1, L"}", 1);
 						}
 
 						//CP_OEMCP -The current system OEM code page
 						WideCharToMultiByte(CP_OEMCP, 0, text, -1, text_buffer, 0x1000, NULL, NULL);
-						text_buffer_length = *len / sizeof(wchar_t); // saved for not unicode hook
-
+						text_buffer_length = len / sizeof(wchar_t); // saved for not unicode hook
+						*size = static_cast<DWORD>(len);
 						return true;
 					};
 					NewHook(hp, "Ren'py 3 unicode");

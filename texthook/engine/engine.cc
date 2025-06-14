@@ -12186,13 +12186,26 @@ const BYTE bytes2[] = {
 //    0x8D, 0x44, 0x24, 0x1C              // lea eax, [esp+1C]
   };
 
+// 宿りし乙女の誓いと魔法 -TRIAL EDITION- 1.9.9.16
+const BYTE bytes3[] = {
+    0x55,					//push ebp
+    0x8B, 0xEC,					//mov ebp,esp
+    0x83, 0xE4, 0xF8,				//and esp,FFFFFFF8
+    0x81, 0xEC, 0x0C, 0x01, 0x00, 0x00,		//sub esp,10C
+    0x8B, 0x45, 0x08,				//mov eax,dword ptr ss:[ebp+8]
+    0x89, 0x4C, 0x24, XX			//mov dword ptr ss:[esp+4],ecx
+};
+
   ULONG range = min(processStopAddress - processStartAddress, MAX_REL_ADDR);
   ULONG addr = MemDbg::findBytes(bytes, sizeof(bytes), processStartAddress, processStartAddress + range);
   if (!addr) {
     addr = MemDbg::findBytes(bytes2, sizeof(bytes2), processStartAddress, processStartAddress + range);
     if (!addr) {
-      ConsoleOutput("vnreng:WillPlus7: pattern not found (all)");
-      return false;
+      addr = MemDbg::findBytes(bytes3, sizeof(bytes3), processStartAddress, processStartAddress + range);
+      if (!addr) {
+        ConsoleOutput("vnreng:WillPlus7: pattern not found (all)");
+        return false;
+      }
     }
   }
 

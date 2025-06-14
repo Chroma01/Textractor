@@ -10309,6 +10309,78 @@ bool InsertCandyHook3()
   return true;
 }
 
+bool InsertCandyHook4()
+{
+  //by Chenx221
+    /*
+    * https://vndb.org/r61033
+    */
+  const BYTE bytes[] = {
+    0xCC,                                   // int3
+    0x55,                                   // push ebp                       // hook here
+    0x8B, 0xEC,                             // mov ebp,esp
+    0x6A, 0xFF,                             // push FFFFFFFF
+    0x68, XX4,                              // push tsumairo.4A387B
+    0x64, 0xA1, 0x00, 0x00, 0x00, 0x00,     // mov eax,dword ptr fs:[0]
+    0x50,                                   // push eax
+    0x81, 0xEC, XX4,                        // sub esp,250
+    0xA1, XX4,                              // mov eax,dword ptr ds:[4D3008]
+    0x33, 0xC5,                             // xor eax,ebp
+    0x89, 0x45, 0xEC,                       // mov dword ptr ss:[ebp-14],eax
+    0x53,                                   // push ebx
+    0x56,                                   // push esi
+    0x57,                                   // push edi
+    0x50,                                   // push eax
+    0x8D, 0x45, 0xF4,                       // lea eax,dword ptr ss:[ebp-C]
+    0x64, 0xA3, 0x00, 0x00, 0x00, 0x00,     // mov dword ptr fs:[0],eax
+    0x8B, XX,                               // mov ebx,edx
+    0x8B, XX,                               // mov esi,ecx
+    0x89, 0xB5, XX4,                        // mov dword ptr ss:[ebp-234],esi
+  };
+
+    // https://vndb.org/v50073
+    // https://vndb.org/v55575 (trial)
+  const BYTE bytes2[] = {
+    0xCC,                                   // int3
+    0x55,                                   // push ebp                       // hook here
+    0x8B, 0xEC,                             // mov ebp,esp
+    0x6A, 0xFF,                             // push FFFFFFFF
+    0x68, XX4,                              // push tomefurew.4B8DFB
+    0x64, 0xA1, 0x00, 0x00, 0x00, 0x00,     // mov eax,dword ptr fs:[0]
+    0x50,                                   // push eax
+    0x81, 0xEC, XX4,                        // sub esp,260
+    0xA1, XX4,                              // mov eax,dword ptr ds:[4F0240]
+    0x33, 0xC5,                             // xor eax,ebp
+    0x89, 0x45, 0xEC,                       // mov dword ptr ss:[ebp-14],eax
+    0x53,                                   // push ebx
+    0x56,                                   // push esi
+    0x57,                                   // push edi
+    0x50,                                   // push eax
+    0x8D, 0x45, 0xF4,                       // lea eax,dword ptr ss:[ebp-C]
+    0x64, 0xA3, 0x00, 0x00, 0x00, 0x00,     // mov dword ptr fs:[0],eax
+    0x8B, XX,                               // mov ebx,edx
+    0x8B, XX,                               // mov esi,ecx
+    0x8D, 0x8D, XX4,                        // lea ecx,dword ptr ss:[ebp-26C]
+  };
+
+  ULONG range = min(processStopAddress - processStartAddress, MAX_REL_ADDR);
+  ULONG addr = MemDbg::findBytes(bytes, sizeof(bytes), processStartAddress, processStartAddress + range);
+  if (!addr) {
+    addr = MemDbg::findBytes(bytes2, sizeof(bytes2), processStartAddress, processStartAddress + range);
+    if (!addr) {
+      ConsoleOutput("vnreng:SystemC#4: pattern not found");
+      return false;
+    }
+  }
+  HookParam hp = {};
+  hp.address = addr + 1;
+  hp.offset = pusha_edx_off - 4;
+  hp.type = USING_STRING;
+  ConsoleOutput("vnreng: INSERT SystemC#4");
+  NewHook(hp, "SystemC#4");
+  return true;
+}
+
 /** jichi 10/2/2013: CHECKPOINT
  *
  *  [5/31/2013] 恋もHもお勉強も、おまかせ�お姉ちも�部
@@ -10356,7 +10428,7 @@ bool InsertCandyHook()
   if (Util::CheckFile(L"SystemC.exe"))
     return InsertCandyHook1();
   else
-    return InsertCandyHook3() || InsertCandyHook2();
+    return InsertCandyHook4() || InsertCandyHook3() || InsertCandyHook2();
     //bool b2 = InsertCandyHook2(),
     //     b3 = InsertCandyHook3();
     //return b2 || b3;

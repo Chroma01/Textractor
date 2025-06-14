@@ -16645,7 +16645,11 @@ bool NeXAS2Filter(LPVOID data, DWORD *size, HookParam *, BYTE)
   StringFilter(text, len, "@v", 7); // remove "@v" followed by 5 char
   StringFilter(text, len, "@p", 2);
   StringFilter(text, len, "@k", 2);
-  if (cpp_strnstr(text, "@", *len))
+  StringFilter(text, len, "@r", 2);
+  // 对于DeepOne-領界侵犯- 体験版
+  // 已知缺陷: 文本首字若使用ruby等特殊样式时会丢失首字
+  StringFilterBetween(text, len, "@", 1, "@", 1);
+  if (cpp_strnstr(text, "@", *len)) // 这么做是不是太过激了
     return false;
 
   if (prevText.find(text, 0, *len) != std::string::npos) // Check if the string is present in the previous one

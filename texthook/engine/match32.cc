@@ -300,7 +300,7 @@ bool DetermineEngineByFile1()
   // jichi 12/27/2014: LunaSoft
   if (Util::CheckFile(L"Pac\\*.pac")) {
     return InsertLunaSoftHook();
-    // Fix: 部分LunaSoft游戏需要kernel32.dll:lstrlenA，直接返回true会跳过这条hook
+    // Fix: 部分LunaSoft游戏需要kernel32.dll:lstrlenA，直接返回true会跳过后续hook
     // Example: 正しい性奴隷の使い方
   }
   // jichi 9/16/2013: Add Gesen18

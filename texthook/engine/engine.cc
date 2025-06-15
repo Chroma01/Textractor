@@ -15556,8 +15556,85 @@ bool InsertSilkys2Hook()
   return true;
 }
 
+bool InsertSilkys3Hook()
+{
+  //by Chenx221
+
+  ULONG range = min(processStopAddress - processStartAddress, MAX_REL_ADDR);
+  HookParam hp = {};
+  hp.offset = pusha_eax_off -4;
+  hp.length_offset = 1;
+  hp.type = USING_SPLIT;
+  hp.split = 0x4;
+
+  /*
+  * Sample games:
+  * https://vndb.org/v29853
+  */
+  const BYTE bytes[] = {
+    0x66, 0x0F, 0xBE, 0x00, // movsx ax,word ptr ds:[eax]
+    0x8B, 0x0F, // mov ecx,dword ptr ds:[edi] // hook here
+    0x68, 0x80, 0x00, 0x00, 0x00, // push 80
+    0x68, 0x80, 0x00, 0x00, 0x00, // push 80
+    0x0F, 0xB7, 0xF0, // movzx esi,ax
+  };
+  ULONG addr = MemDbg::findBytes(bytes, sizeof(bytes), processStartAddress, processStartAddress + range);
+  if(addr){
+    hp.address = addr + 4;
+    hp.type |= BIG_ENDIAN;
+    ConsoleOutput("vnreng: INSERT Silkys3");
+    NewHook(hp, "Silkys3");
+    return true;
+  }
+
+  /*
+  * Sample games:
+  * https://vndb.org/v34136 (Remake)
+  */
+  const BYTE bytes2[] = {
+    0xFF, 0x90, 0xD0, 0x00, 0x00, 0x00, // call dword ptr ds:[eax+0xD0]
+    0x8B, 0x0F, // mov ecx,dword ptr ds:[edi] // hook here
+    0x68, 0x80, 0x00, 0x00, 0x00, // push 80
+    0x68, 0x80, 0x00, 0x00, 0x00, // push 80
+    0x0F, 0xB7, 0xF0, // movzx esi,ax
+  };
+  addr = MemDbg::findBytes(bytes2, sizeof(bytes2), processStartAddress, processStartAddress + range);
+  if(addr){
+    hp.address = addr + 6;
+    hp.type |= USING_UNICODE;
+    ConsoleOutput("vnreng: INSERT Silkys3");
+    NewHook(hp, "Silkys3");
+    return true;
+  }
+
+  /*
+  * Sample games:
+  * https://vndb.org/v2337 (Remake)
+  */
+  const BYTE bytes3[] = {
+    0xFF, 0xD0,              // call eax
+    0x8B, 0xF0,                   // mov esi,eax    << hook here
+    0x83, 0xEC, 0x18,                    // sub esp,18
+    0x8B, 0xD4,                // mov edx,esp
+    0x89, 0x75, 0x88          // mov dword ptr ss:[ebp-78],esi
+  };
+  addr = MemDbg::findBytes(bytes3, sizeof(bytes3), processStartAddress, processStartAddress + range);
+  if(addr){
+    hp.address = addr + 2;
+    hp.type |= USING_UNICODE | DATA_INDIRECT;
+    hp.index = 0;
+    ConsoleOutput("vnreng: INSERT Silkys3");
+    NewHook(hp, "Silkys3");
+    return true;
+  }
+
+  ConsoleOutput("vnreng:Silkys3: pattern not found");
+  return false;
+}
+
 bool InsertSilkysHooks()
-{ return InsertSilkysHook() || InsertSilkys2Hook();}
+{ bool b = InsertSilkys3Hook();
+return InsertSilkysHook() || InsertSilkys2Hook() || b;}
 
 /** jichi 6/1/2014 Eushully
  *  Insert to the last GetTextExtentPoint32A

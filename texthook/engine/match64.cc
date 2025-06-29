@@ -1356,6 +1356,16 @@ namespace Engine
 			hp.split = 0x10;
 			hp.length_offset = 1;
 			hp.type = USING_UNICODE | USING_SPLIT;
+			hp.filter_fun = [](LPVOID data, DWORD *size, HookParam *, BYTE)
+			{
+				auto text = reinterpret_cast<LPWSTR>(data);
+				auto len = reinterpret_cast<size_t *>(size);
+				size_t wcharLen = *len / sizeof(wchar_t);
+
+				if (wcharLen == 1 && text[0] == 0x3000)
+					return false;
+				return true;
+			};
 			ConsoleOutput("Textractor: INSERT BGI64");
 			NewHook(hp, "BGI64");
 			found = true;

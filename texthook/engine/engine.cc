@@ -11402,11 +11402,51 @@ bool InsertWolf4Hook() {
   return true;
 }
 
+  bool InsertWolf6Hook() {
+  //By Chenx221
+
+  ULONG range = processStopAddress - processStartAddress;
+  HookParam myhp = {};
+  myhp.type = USING_STRING | USING_UTF8;
+
+  //3.629 Std/3.609 Std/3.585 Pro/3.396 Std/3.303 Std/3.191 Std
+  const BYTE bytes0[] = {0x8D, XX, 0x18, 0x8D, XX, 0x30, 0x3B, XX, 0x74, 0x13, 0x83, XX, 0x14, XX, 0x8B, XX2, 0x02, 0x8B, XX, 0xFF, XX, 0x10, 0x50, 0xE8, XX4};
+  ULONG addr = MemDbg::findBytes(bytes0, sizeof(bytes0), processStartAddress, processStartAddress + range);
+  if (!addr) {
+    //3.260 Pro/3.191 Pro
+    const BYTE bytes1[] = {0x56, 0x8B ,XX , 0x57 , 0x8D , 0x7E ,XX , 0x57 , 0x8D , 0x4E ,XX , 0xE8 ,XX4 , 0x8D , 0x8E ,XX4};
+    addr = MemDbg::findBytes(bytes1, sizeof(bytes1), processStartAddress, processStartAddress + range);
+    if (!addr) {
+      //3.113 Std
+      const BYTE bytes2[] = {0x83, 0x7F, XX, 0x10, 0x8D, XX2, 0x8B, XX, 0x72, XX, 0x8B, XX, 0x83, XX2, 0x10};
+      addr = MemDbg::findBytes(bytes2, sizeof(bytes2), processStartAddress, processStartAddress + range);
+      if (!addr) {
+        //3.6 Std
+        const BYTE bytes3[] = {0x89, 0x85, XX4, 0x72, XX, 0x8B, XX2, 0x8B, XX2};
+        addr = MemDbg::findBytes(bytes3, sizeof(bytes3), processStartAddress, processStartAddress + range);
+        if (!addr) {
+          ConsoleOutput("vnreng:WolfRPG: pattern6 not found");
+          return false;
+        } else
+        {addr+=0xB;myhp.offset = pusha_ecx_off - 4;}
+      } else
+      {addr+=0xD;myhp.offset = pusha_eax_off - 4;}
+    } else
+    {addr+=0x10;myhp.offset = pusha_eax_off - 4;myhp.type |= DATA_INDIRECT | KNOWN_UNSTABLE;myhp.index = 0;}
+  } else
+  {addr+=0x18;myhp.offset = pusha_eax_off - 4;}
+  myhp.address = addr;
+  NewHook(myhp, "WolfRPG6");
+  ConsoleOutput("Insert: WolfRPG6 Hook");
+  ConsoleOutput(R"(Recommend: Settings > Enable 'Filter repetition')");
+  return true;
+}
+
 } // WolfRPG namespace
 
 bool InsertWolfHook()
 {
-   return InsertOldWolfHook(), InsertWolf2Hook(), InsertWolf3Hook(), InsertWolf4Hook(), InsertWolf5Hook();
+   return InsertOldWolfHook(), InsertWolf2Hook(), InsertWolf3Hook(), InsertWolf4Hook(), InsertWolf5Hook(), InsertWolf6Hook();
 }
 
 bool InsertIGSDynamicHook(LPVOID addr, DWORD frame, DWORD stack)

@@ -10,41 +10,46 @@ const char* GET_API_KEY_FROM = nullptr;
 std::wstring currTranslateTo;
 
 extern const QStringList languagesTo
+		{
+			"Arabic",
+			"Bulgarian",
+			"Chinese (simplified)",
+			"Chinese (traditional)",
+			"Czech",
+			"Danish",
+			"Dutch",
+			"English (American)",
+			"English (British)",
+			"Estonian",
+			"Finnish",
+			"French",
+			"German",
+			"Greek",
+			"Hebrew",
+			"Hungarian",
+			"Indonesian",
+			"Italian",
+			"Japanese",
+			"Korean",
+			"Latvian",
+			"Lithuanian",
+			"Norwegian",
+			"Polish",
+			"Portuguese (Brazilian)",
+			"Portuguese (target)",
+			"Romanian",
+			"Russian",
+			"Slovak",
+			"Slovenian",
+			"Spanish",
+			"Swedish",
+			"Turkish",
+			"Ukrainian",
+			"Vietnamese"
+		},
+languagesFrom
 {
-	"Bulgarian",
-	"Chinese (Simplified)",
-	"Czech",
-	"Danish",
-	"Dutch",
-	"English (American)",
-	"English (British)",
-	"Estonian",
-	"Finnish",
-	"French",
-	"German",
-	"Greek",
-	"Hungarian",
-	"Indonesian",
-	"Italian",
-	"Japanese",
-	"Korean",
-	"Latvian",
-	"Lithuanian",
-	"Norwegian",
-	"Polish",
-	"Portuguese",
-	"Portuguese (Brazilian)",
-	"Romanian",
-	"Russian",
-	"Slovak",
-	"Slovenian",
-	"Spanish",
-	"Swedish",
-	"Turkish",
-	"Ukrainian"
-},
-languagesFrom =
-{
+	"Arabic",
 	"Bulgarian",
 	"Chinese",
 	"Czech",
@@ -56,6 +61,7 @@ languagesFrom =
 	"French",
 	"German",
 	"Greek",
+	"Hebrew",
 	"Hungarian",
 	"Indonesian",
 	"Italian",
@@ -73,44 +79,53 @@ languagesFrom =
 	"Spanish",
 	"Swedish",
 	"Turkish",
-	"Ukrainian"
+	"Ukrainian",
+	"Vietnamese"
 };
 extern const std::unordered_map<std::wstring, std::wstring> codes
 {
-	{ { L"Bulgarian" }, { L"bg-BG" } },
-	{ { L"Chinese" }, { L"zh" } },
-	{ { L"Chinese (Simplified)" }, { L"zh-ZH" } },
-	{ { L"Czech" }, { L"cs-CS" } },
-	{ { L"Danish" }, { L"da-DA" } },
-	{ { L"Dutch" }, { L"nl-NL" } },
-	{ { L"English" }, { L"en" } },
-	{ { L"English (American)" }, { L"en-US" } },
-	{ { L"English (British)" }, { L"en-GB" } },
-	{ { L"Estonian" }, { L"et-ET" } },
-	{ { L"Finnish" }, { L"fi-FI" } },
-	{ { L"French" }, { L"fr-FR" } },
-	{ { L"German" }, { L"de-DE" } },
-	{ { L"Greek" }, { L"el-EL" } },
-	{ { L"Hungarian" }, { L"hu-HU" } },
-	{ { L"Indonesian" }, { L"id-ID" } },
-	{ { L"Italian" }, { L"it-IT" } },
-	{ { L"Japanese" }, { L"ja-JA" } },
-	{ { L"Korean" }, { L"ko-KO" } },
-	{ { L"Latvian" }, { L"lv-LV" } },
-	{ { L"Lithuanian" }, { L"lt-LT" } },
-	{ { L"Norwegian" }, { L"nb-NB" } },
-	{ { L"Polish" }, { L"pl-PL" } },
-	{ { L"Portuguese" }, { L"pt-PT" } },
-	{ { L"Portuguese (Brazilian)" }, { L"pt-BR" } },
-	{ { L"Romanian" }, { L"ro-RO" } },
-	{ { L"Russian" }, { L"ru-RU" } },
-	{ { L"Slovak" }, { L"sk-SK" } },
-	{ { L"Slovenian" }, { L"sl-SL" } },
-	{ { L"Spanish" }, { L"es-ES" } },
-	{ { L"Swedish" }, { L"sv-SV" } },
-	{ { L"Turkish" }, { L"tr-TR" } },
-	{ { L"Ukrainian" }, { L"uk-UK" } },
-	{ { L"?" }, { L"auto" } }
+	{{L"Arabic"}, {L"ar"}},
+	{{L"Bulgarian"}, {L"bg"}},
+	{{L"Chinese"}, {L"zh"}},
+	{{L"Chinese (simplified)"}, {L"zh-hans"}},
+	{{L"Chinese (traditional)"}, {L"zh-hant"}},
+	{{L"Czech"}, {L"cs"}},
+	{{L"Danish"}, {L"da"}},
+	{{L"Dutch"}, {L"nl"}},
+	{{L"German"}, {L"de"}},
+	{{L"Greek"}, {L"el"}},
+	{{L"English"}, {L"en"}},
+	{{L"English (British)"}, {L"en-gb"}},
+	{{L"English (American)"}, {L"en-us"}},
+	{{L"Spanish"}, {L"es"}},
+	{{L"Estonian"}, {L"et"}},
+	{{L"Finnish"}, {L"fi"}},
+	{{L"French"}, {L"fr"}},
+	{{L"Hebrew"}, {L"he"}},
+	{{L"Hungarian"}, {L"hu"}},
+	{{L"Indonesian"}, {L"id"}},
+	{{L"Italian"}, {L"it"}},
+	{{L"Japanese"}, {L"ja"}},
+	{{L"Korean"}, {L"ko"}},
+	{{L"Lithuanian"}, {L"lt"}},
+	{{L"Latvian"}, {L"lv"}},
+	{{L"Norwegian"}, {L"nb"}},
+	{{L"Polish"}, {L"pl"}},
+	{{L"Portuguese"}, {L"pt"}},
+	{{L"Portuguese (Brazilian)"}, {L"pt-br"}},
+	{{L"Portuguese (target)"}, {L"pt-pt"}},
+	{{L"Romanian"}, {L"ro"}},
+	{{L"Russian"}, {L"ru"}},
+	{{L"Slovak"}, {L"sk"}},
+	{{L"Slovenian"}, {L"sl"}},
+	{{L"Spanish"}, {L"es"}},
+	{{L"Swedish"}, {L"sv"}},
+	{{L"Turkish"}, {L"tr"}},
+	{{L"Ukrainian"}, {L"uk"}},
+	{{L"Vietnamese"}, {L"vi"}},
+
+	{{L"?"}, {L"auto"}}
+
 };
 
 bool translateSelectedOnly = true, useRateLimiter = true, rateLimitSelected = false, useCache = true, useFilter = true;
@@ -157,20 +172,21 @@ std::pair<bool, std::wstring> Translate(const std::wstring& text, TranslationPar
 	std::scoped_lock lock(translationMutex);
 	std::wstring escaped; // DeepL breaks with slash in input
 	for (auto ch : text) ch == '/' ? escaped += L"\\/" : escaped += ch;
-	if (currTranslateTo == tlp.translateTo)
-		DevTools::SendRequest("Page.navigate", FormatString(LR"({"url":"https://www.deepl.com/en/translator#%s/%s/%s"})", (tlp.translateFrom == L"?") ? codes.at(tlp.translateFrom) : codes.at(tlp.translateFrom).substr(0, 2), codes.at(tlp.translateTo).substr(0, 2), Escape(escaped)));
-	else
-	{
-		currTranslateTo = tlp.translateTo;
-		DevTools::SendRequest("Page.navigate", FormatString(LR"({"url":"https://www.deepl.com/en/translator#%s/%s/%s"})", (tlp.translateFrom == L"?") ? codes.at(tlp.translateFrom) : codes.at(tlp.translateFrom).substr(0, 2), codes.at(tlp.translateTo), Escape(escaped)));
-	}
+	DevTools::SendRequest("Runtime.evaluate",LR"({"expression":"document.querySelector('[data-testid=translator-target-input] div[contenteditable=true]').innerHTML = '';","returnByValue":false})");
+	DevTools::SendRequest("Page.navigate", FormatString(LR"({"url":"https://www.deepl.com/en/translator#%s/%s/%s"})", (tlp.translateFrom == L"?") ? codes.at(tlp.translateFrom) : codes.at(tlp.translateFrom).substr(0, 2), codes.at(tlp.translateTo), Escape(escaped)));
+	// if (currTranslateTo == tlp.translateTo)
+	// 	DevTools::SendRequest("Page.navigate", FormatString(LR"({"url":"https://www.deepl.com/en/translator#%s/%s/%s"})", (tlp.translateFrom == L"?") ? codes.at(tlp.translateFrom) : codes.at(tlp.translateFrom).substr(0, 2), codes.at(tlp.translateTo).substr(0, 2), Escape(escaped)));
+	// else
+	// {
+	// 	currTranslateTo = tlp.translateTo;
+	// 	DevTools::SendRequest("Page.navigate", FormatString(LR"({"url":"https://www.deepl.com/en/translator#%s/%s/%s"})", (tlp.translateFrom == L"?") ? codes.at(tlp.translateFrom) : codes.at(tlp.translateFrom).substr(0, 2), codes.at(tlp.translateTo), Escape(escaped)));
+	// }
 
 	for (int retry = 0; ++retry < 100; Sleep(100))
 		if (auto translation = Copy(DevTools::SendRequest("Runtime.evaluate",
 			LR"({"expression":"document.querySelector('[data-testid=translator-target-input]').textContent.trim() ","returnByValue":true})"
 		)[L"result"][L"value"].String()))
 			if (!translation->empty()) {
-				DevTools::SendRequest("Runtime.evaluate",LR"({"expression":"document.querySelector('[data-testid=translator-target-input] div[contenteditable=true]').innerHTML = '';","returnByValue":false})");
 				return { true, htmlDecode(translation.value()) };
 			}
 	if (auto errorMessage = Copy(DevTools::SendRequest("Runtime.evaluate",

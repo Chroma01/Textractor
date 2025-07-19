@@ -16775,7 +16775,22 @@ bool InsertNeXASHook()
   NewHook(hp, "NeXAS");
   return true;
 }
+	void RegexReplacer(char* str, size_t* size, const std::regex& pattern, const std::string& replacement) {
+		std::string s(str, *size);
+		s = std::regex_replace(s, pattern, replacement);
+		*size = s.size();
+		std::memcpy(str, s.c_str(), *size);
+		str[*size] = '\0';
+	}
 
+	void RegexReplacerW(wchar_t* str, size_t* size, const std::wregex& pattern, const std::wstring& replacement) {
+		std::wstring s(str, *size / sizeof(wchar_t));
+		s = std::regex_replace(s, pattern, replacement);
+		*size = s.size() * sizeof(wchar_t);
+		std::memcpy(str, s.c_str(), *size);
+		str[s.size()] = L'\0';
+	}
+	
 bool NeXAS2Filter(LPVOID data, DWORD *size, HookParam *, BYTE)
 {
   auto text = reinterpret_cast<LPSTR>(data);
@@ -16783,15 +16798,10 @@ bool NeXAS2Filter(LPVOID data, DWORD *size, HookParam *, BYTE)
   static std::string prevText;
 
   StringCharReplacer(text, len, "@n", 2, ' ');
-  StringFilter(text, len, "@v", 7); // remove "@v" followed by 5 char
-  StringFilter(text, len, "@p", 2);
-  StringFilter(text, len, "@k", 2);
-  StringFilter(text, len, "@r", 2);
-  // 对于DeepOne-領界侵犯- 体験版
-  // 已知缺陷: 文本首字若使用ruby等特殊样式时会丢失首字
-  StringFilterBetween(text, len, "@", 1, "@", 1);
-  if (cpp_strnstr(text, "@", *len)) // 这么做是不是太过激了
-    return false;
+  std::regex pattern(R"(@v[a-zA-Z_0-9]+|@[wmsf][0-9]+|@[pke])");
+	RegexReplacer(text, len, pattern, "");
+	std::regex pattern2(R"(@r([^@]+)@[^@]+@)");
+	RegexReplacer(text, len, pattern2, "$1");
 
   if (prevText.find(text, 0, *len) != std::string::npos) // Check if the string is present in the previous one
     return false;
@@ -16821,12 +16831,13 @@ bool InsertNeXAS2Hook() {
 	}
 
 	HookParam hp = {};
-	hp.address = addr;
-	hp.offset = pusha_eax_off -4;
+	hp.address = addr-6;
+	hp.offset = pusha_ecx_off -4;
     hp.index = 0;
-	hp.split = pusha_edx_off -4;
-    hp.split_index = 0;
-	hp.type = USING_STRING | USING_UTF8 | USING_SPLIT;
+	//hp.split = pusha_edx_off -4;
+    //hp.split_index = 0;
+
+	hp.type = USING_STRING | USING_UTF8 | NO_CONTEXT;
 	hp.filter_fun = NeXAS2Filter;
 	ConsoleOutput("vnreng: INSERT NeXAS2");
 	NewHook(hp, "NeXAS2");

@@ -7441,6 +7441,30 @@ kf3FHD.exe
       found = true;
   }
 
+  // By Chenx221
+  // For ヒミツの合宿 -スク水ヒップに溺れたい- 体験版
+  const BYTE bytes4[] = {
+      0x55,                     // push ebp     <- hook here
+      0x8B, 0xEC,               // mov ebp,esp
+      0x8B, 0x55, 0x18,         // mov edx, dword ptr ss:[ebp+0x18]
+      0x56,                     // push esi
+      0x8B, 0x75, 0x0C,         // mov esi, dword ptr ss:[ebp+0xC]
+      0x57,                     // push edi
+  };
+  if (DWORD addr = MemDbg::findBytes(bytes4, sizeof(bytes4), processStartAddress, processStartAddress + range))
+  {
+      HookParam hp = {};
+      hp.address = addr;
+      hp.offset = pusha_ecx_off - 4;
+      hp.index = 0x00;
+      hp.filter_fun = Waffle3Filter;
+      hp.type = USING_STRING | USING_SPLIT;
+      hp.split = pusha_ebp_off-4;
+      ConsoleOutput("Textractor: INSERT WAFFLE5");
+      NewHook(hp, "WAFFLE5");
+      found = true;
+  }
+
   //ConsoleOutput("Probably Waffle. Wait for text.");
   if (!found) trigger_fun = InsertWaffleDynamicHook;
   return found;

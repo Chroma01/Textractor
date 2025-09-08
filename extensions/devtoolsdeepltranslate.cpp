@@ -164,6 +164,90 @@ std::wstring htmlDecode (std::wstring text) {
 	return text;
 }
 
+/**
+		<script type="text/javascript">
+            (function() {
+                const loc = ((decodeURIComponent("" + location.pathname).match(/^.*?\/translator.*?\/(.*)($|\?)|/) || [])[1] || "");
+                const parts = loc.split("/");
+                if (parts.length < 3) {
+                    return;
+                }
+                let mode = parts[0];
+                if (mode === 'l' || mode === 'q') {
+                    parts.shift();
+                } else {
+                    mode = 'q';
+                }
+                let initialState, newPageId;
+                const a = parts.map(function(s) {
+                    return s.replace(/\+/g, " ")
+                })
+                  , revert = [];
+                if (mode === 'q') {
+                    const s = parts.join("/");
+                    let v = 0x811c9dc5;
+                    for (let i = s.length - 1; i >= 0; --i) {
+                        v ^= s.charCodeAt(i);
+                        v += (v << 1) + (v << 4) + (v << 7) + (v << 8) + (v << 24);
+                    }
+                    const checked = (v >>> 0).toString(16).match(/73536$/);
+                    revert.push(function() {
+                        window.history.replaceState(null, "", (location.href.match(/^.*?translator/g) || [])[0]);
+                    });
+                    initialState = {
+                        sourceLangcode: a[0],
+                        sourceText: a[1],
+                        targetLangcode: a[2],
+                        revert: revert,
+                        mode: 'q'
+                    };
+                    if (checked) {
+                        initialState.checked = true;
+                        initialState.sourceChains = [[a[1]]];
+                        initialState.targetChains = [[a[3]]];
+                        newPageId = 1200;
+                    }
+                } else if (mode === 'l') {
+                    initialState = {
+                        sourceLangcode: a[0],
+                        targetLangcode: a[1],
+                        revert: revert,
+                        checked: true,
+                        mode: 'l'
+                    };
+                    newPageId = 1201;
+                }
+
+                if (newPageId) {
+                    const originalDapPageId = window._customPageId;
+                    window._customPageId = newPageId;
+                    revert.push(function() {
+                        window._customPageId = originalDapPageId
+                    });
+                }
+
+                window._initialTranslatorState = initialState;
+            }
+            )();
+        </script>
+ */
+std::wstring ReplaceSP(std::wstring text)
+{
+	std::wstring result;
+	result.reserve(text.length());
+	for (wchar_t ch : text) {
+		if (ch == L'.') {
+			result += L'．';
+		} else if (ch == L'\n') {
+			result += L' ';
+		}
+		else {
+			result += ch;
+		}
+	}
+	return result;
+}
+
 std::pair<bool, std::wstring> Translate(const std::wstring& text, TranslationParam tlp)
 {
 	if (!DevTools::Connected()) return { false, FormatString(L"%s: %s", TRANSLATION_ERROR, ERROR_START_CHROME) };
@@ -173,7 +257,7 @@ std::pair<bool, std::wstring> Translate(const std::wstring& text, TranslationPar
 	std::wstring escaped; // DeepL breaks with slash in input
 	for (auto ch : text) ch == '/' ? escaped += L"\\/" : escaped += ch;
 	DevTools::SendRequest("Runtime.evaluate",LR"({"expression":"document.querySelector('[data-testid=translator-target-input] div[contenteditable=true]').innerHTML = '';","returnByValue":false})");
-	DevTools::SendRequest("Page.navigate", FormatString(LR"({"url":"https://www.deepl.com/en/translator#%s/%s/%s"})", (tlp.translateFrom == L"?") ? codes.at(tlp.translateFrom) : codes.at(tlp.translateFrom).substr(0, 2), codes.at(tlp.translateTo), Escape(escaped)));
+	DevTools::SendRequest("Page.navigate", FormatString(LR"({"url":"https://www.deepl.com/en/translator/q/%s/%s/%s"})", (tlp.translateFrom == L"?") ? codes.at(tlp.translateFrom) : codes.at(tlp.translateFrom).substr(0, 2),Escape(ReplaceSP(escaped)), codes.at(tlp.translateTo)));
 	// if (currTranslateTo == tlp.translateTo)
 	// 	DevTools::SendRequest("Page.navigate", FormatString(LR"({"url":"https://www.deepl.com/en/translator#%s/%s/%s"})", (tlp.translateFrom == L"?") ? codes.at(tlp.translateFrom) : codes.at(tlp.translateFrom).substr(0, 2), codes.at(tlp.translateTo).substr(0, 2), Escape(escaped)));
 	// else

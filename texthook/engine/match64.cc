@@ -1500,6 +1500,57 @@ namespace Engine
 		return false;
 	}
 
+	bool InsertSakanaGL2Hook() {
+		//by Chenx221
+		/*
+		* 需要更多测试
+		* Sample games:
+		* 悪役令嬢をわからせる！？体験版
+		*/
+
+		// 00007FFA1906FD8F | CC                  | int3                             |
+		// 00007FFA1906FD90 | 48:895C24 08        | mov qword ptr ss:[rsp+8],rbx     |
+		// 00007FFA1906FD95 | 48:896C24 10        | mov qword ptr ss:[rsp+10],rbp    |
+		// 00007FFA1906FD9A | 48:897424 18        | mov qword ptr ss:[rsp+18],rsi    | rsi:sakanaKill+1D93F4
+		// 00007FFA1906FD9F | 57                  | push rdi                         |
+		// 00007FFA1906FDA0 | 48:83EC 20          | sub rsp,20                       |
+		// 00007FFA1906FDA4 | 49:63F0             | movsxd rsi,r8d                   | rsi:sakanaKill+1D93F4
+		// 00007FFA1906FDA7 | 48:8BF9             | mov rdi,rcx                      |
+		// 00007FFA1906FDAA | 8B49 14             | mov ecx,dword ptr ds:[rcx+14]    |
+		// 00007FFA1906FDAD | 48:8BEA             | mov rbp,rdx                      |
+
+		const BYTE bytes[] = {
+			0xCC,
+			0x48,0x89,0x5C,0x24,0x08,
+			0x48,0x89,0x6C,0x24,0x10,
+			0x48,0x89,0x74,0x24,0x18,
+			0x57,
+			0x48,0x83,0xEC,0x20,
+			0x49,0x63,0xF0,
+			0x48,0x8B,0xF9,
+			0x8B,0x49,0x14,
+			0x48,0x8B,0xEA
+		};
+		HMODULE module = GetModuleHandleW(L"sakanagl.dll");
+		auto [minAddress, maxAddress] = Util::QueryModuleLimits(module);
+		for (auto addr: Util::SearchMemory(bytes, sizeof(bytes), PAGE_EXECUTE, minAddress, maxAddress)) {
+			HookParam hp = {};
+			hp.address = addr + 1;
+			hp.offset = pusha_rdx_off - 4;
+			hp.null_length = 4;
+			hp.type = USING_UNICODE | USING_STRING;
+			// 潜在问题 UTF-32
+			ConsoleOutput("vnreng: INSERT SakanaGL_2 x64");
+			NewHook(hp, "SakanaGL_2_x64");
+
+			return true;
+		}
+
+		ConsoleOutput("vnreng:SakanaGL_2 x64: pattern not found");
+		return false;
+	}
+
+
 	bool InsertLightVNHook() {
 		// by Chenx221
 		/*
@@ -1636,8 +1687,9 @@ namespace Engine
 		}
 
 		if (Util::CheckFile(L"sakanagl.dll")) {
-			if (InsertSakanaGLHook())
-				return true;
+			bool status = InsertSakanaGLHook();
+			status |= InsertSakanaGL2Hook();
+			return status;
 		}
 
 		// 也许有更好的检测方法

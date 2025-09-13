@@ -7523,7 +7523,6 @@ bool InsertTinkerBellHook()
     }
   }
   if (count) return true;
-  ConsoleOutput("vnreng:TinkerBell: failed");
 
 // By Chenx221
 // Game executables protected by PlayDRM can also work normally.
@@ -7538,20 +7537,40 @@ bool InsertTinkerBellHook()
     0x56                 // push esi
   };
 
+// https://vndb.org/v56861 (Trial)
+  const BYTE bytes2[] = {
+    0xCC,                   // int3
+    0x53,                   // push ebx  // <-- hook, EBX
+    0x8B, 0xDC,             // mov ebx,esp
+    0x83, 0xEC, 0x08,       // sub esp,8
+    0x83, 0xE4, 0xF0,       // and esp,FFFFFFF0
+    0x83, 0xC4, 0x04,       // add esp,4
+    0x55,                   // push ebp
+    0x8B, 0x6B, 0x04,       // mov ebp,dword ptr ds:[ebx+4]
+    0x89, 0x6C, 0x24, 0x04, // mov dword ptr ss:[esp+4],ebp
+    0x8B, 0xEC,             // mov ebp,esp
+    0x83, 0xEC, 0x48,       // sub esp,48
+    0x56,                   // push esi
+    0x57                    // push edi
+};
+
   ULONG range = min(processStopAddress - processStartAddress, MAX_REL_ADDR);
   DWORD addr = MemDbg::findBytes(bytes1, sizeof(bytes1), processStartAddress, processStartAddress + range);
-  if (addr) {
-    HookParam hp = {};
-    hp.address = addr + 1;
-    hp.offset = pusha_ebx_off - 4;
-    hp.type = USING_UNICODE | USING_STRING;
-    hp.filter_fun = TinkerBellRubyFilter;
-    ConsoleOutput("Textractor: INSERT TinkerBell");
-    NewHook(hp, "TinkerBell");
-    return true;
+  if (!addr) {
+    addr = MemDbg::findBytes(bytes2, sizeof(bytes2), processStartAddress, processStartAddress + range);
+    if (!addr) {
+      ConsoleOutput("vnreng:TinkerBell: failed");
+      return false;
+    }
   }
-
-  return false;
+  HookParam hp2 = {};
+  hp2.address = addr + 1;
+  hp2.offset = pusha_ebx_off - 4;
+  hp2.type = USING_UNICODE | USING_STRING;
+  hp2.filter_fun = TinkerBellRubyFilter;
+  ConsoleOutput("Textractor: INSERT TinkerBell");
+  NewHook(hp2, "TinkerBell");
+  return true;
 }
 
 //  s1=SearchPattern(processStartAddress,processStopAddress-processStartAddress-4,&ch,4);

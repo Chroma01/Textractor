@@ -13131,6 +13131,52 @@ _fin:
 
 }
 } // unnamed namespace
+void SpecialHookAnex86_2(DWORD esp_base, HookParam*, BYTE, DWORD *data, DWORD *split, DWORD *len){
+  __asm
+  {
+    mov eax, esp_base
+    mov ecx, [eax + 0x4]
+    mov ecx, [ecx + 0x8]
+    movzx ebx, byte ptr [ecx + 0x8] ; Low byte
+    movzx edx, byte ptr [ecx + 0x9] ; High byte
+    sub edx, 0x20
+    test edx,edx
+    jnz _jis_char
+    mov eax,data
+    mov [eax],ebx
+    mov eax, len
+    mov [eax], 1
+    jmp _fin
+_jis_char:
+    cmp ebx,0x7E
+    ja _fin
+    cmp edx,0x7E
+    ja _fin
+    test dl,1
+    lea eax, [ebx + 0x7E]
+    movzx ecx, byte ptr [JIS_tableL + ebx]
+    cmovnz eax, ecx
+    mov ah, byte ptr [JIS_tableH + edx]
+    ror ax,8
+    mov ecx, data
+    mov [ecx], eax
+    mov ecx, len
+    mov [ecx], 2
+_fin:
+  }
+}
+
+// sp: Mayonaka no Tantei Night Walker
+bool Anex86_2Filter(LPVOID data, DWORD *size, HookParam *, BYTE)
+{
+  auto text = reinterpret_cast<LPSTR>(data);
+  auto len = reinterpret_cast<size_t *>(size);
+
+  if (*len >= 2 && text[0] == '\x81' && text[1] == '\xA5') return false;
+  return true;
+}
+
+
 bool InsertAnex86Hook()
 {
     const BYTE bytes[] = {
@@ -13154,6 +13200,30 @@ bool InsertAnex86Hook()
         NewHook(hp, "Anex86");
         found = true;
       }
+
+    const BYTE bytes2[] = {
+        0x55,
+        0x8B, 0xEC,
+        0x53,
+        0x56,
+        0x8B, 0xF1,
+        0x8B, 0x4D, 0x08,
+        0x8B, 0x41, 0x08,
+        0x0F, 0xB7, 0x50, 0x04
+    };
+    ULONG addr = MemDbg::findBytes(bytes2, sizeof(bytes2), processStartAddress, processStopAddress);
+    if(addr) {
+        HookParam hp = {};
+        hp.address = addr;
+        hp.offset = pusha_ecx_off - 4;
+        hp.text_fun = SpecialHookAnex86_2;
+        hp.length_offset = 1;
+        hp.filter_fun = Anex86_2Filter;
+
+        ConsoleOutput("vnreng: INSERT Anex86_2");
+        NewHook(hp, "Anex86_2");
+        found = true;
+    }
     if (found) return true;
   ConsoleOutput("vnreng:Anex86: failed");
   return false;

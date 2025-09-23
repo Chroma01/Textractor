@@ -4543,15 +4543,26 @@ bool InsertSiglus2Hook()
     if (addr)
       ConsoleOutput("vnreng:Siglus2: type 2 pattern found");
   }
+  bool found_type2a = false;
+  if (!addr) {
+    const BYTE bytes[] = {
+      0x81,0xf9, 0x0c,0x30,0x00,0x00
+    };
+    addr = MemDbg::findBytes(bytes, sizeof(bytes), processStartAddress, processStartAddress + range);
+    if (addr)
+      { found_type2a = true; ConsoleOutput("vnreng:Siglus2: type 2a pattern found"); }
+  }
 
   if (!addr) {
-    ConsoleOutput("vnreng:Siglus2: both type1 and type2 patterns not found");
+    ConsoleOutput("vnreng:Siglus2: both type1 and type2(a) patterns not found");
     return false;
   }
 
   HookParam hp = {};
   hp.address = addr;
   hp.offset = pusha_esi_off - 4; // -0x20
+  if(found_type2a)
+    hp.offset = pusha_ecx_off - 4;
   hp.type = USING_UNICODE|FIXING_SPLIT; // jichi 6/1/2014: fixing the split value
   hp.length_offset = 1;
 

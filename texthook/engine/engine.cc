@@ -1671,6 +1671,22 @@ bool KiriKiriZ4Filter(LPVOID data, DWORD *size, HookParam *, BYTE)
   return true;
 }
 
+bool KiriKiriZ4FilterAsaSP(LPVOID data, DWORD *size, HookParam *, BYTE)
+{
+  auto text = reinterpret_cast<LPWSTR>(data);
+  auto len = reinterpret_cast<size_t *>(size);
+
+  if (text[0] == L' ' || text[0] == L':' || text[0] == L'@' || text[0] == L']')
+	return false;
+
+  if (cpp_wcsnstr(text, L"[", *len/sizeof(wchar_t))) {
+    WideStringCharReplacer(text, len, L"[r]", 3, L' ');
+    WideStringFilterBetween(text, len, L"[", 1, L"]", 1);
+  }
+
+  return len != 0;
+}
+
 bool InsertKiriKiriZHook4()
 {
   //by Blu3train
@@ -1686,11 +1702,30 @@ bool InsertKiriKiriZHook4()
     0x8B, 0x45, 0x08                 // mov eax,[ebp+08]
   };
 
+  //by Chenx221
+    /*
+    * Sample games: (ASa Project, krkrz 1.3.3.7)
+    * https://vndb.org/v57107
+    * https://vndb.org/v52702
+    * https://vndb.org/v49227
+    */
+  const BYTE bytes1[] = {
+    0xE8, 0xD8, 0xAF, 0xFE, 0xFF,    // call Shironagasu.exe+227B0       << hook here
+    0xC7, 0x45, 0xFC, XX4,           // mov [ebp-04],00000000
+    0xC7, 0x45, 0xF0, XX4,           // mov [ebp-10],00000001
+    0x8B, 0x45, 0x08                 // mov eax,[ebp+08]
+  };
+  bool asaflag = false;
+
   ULONG range = min(processStopAddress - processStartAddress, MAX_REL_ADDR);
   ULONG addr = MemDbg::findBytes(bytes, sizeof(bytes), processStartAddress, processStartAddress + range);
   if (!addr) {
-    ConsoleOutput("vnreng:KiriKiriZ4: pattern not found");
-    return false;
+    addr = MemDbg::findBytes(bytes1, sizeof(bytes1), processStartAddress, processStartAddress + range);
+    if (!addr) {
+      ConsoleOutput("vnreng:KiriKiriZ4: pattern not found");
+      return false;
+    }
+    asaflag = true;
   }
 
   HookParam hp = {};
@@ -1698,6 +1733,10 @@ bool InsertKiriKiriZHook4()
   hp.offset = pusha_ebx_off -4;
   hp.type =  NO_CONTEXT | USING_UNICODE | USING_STRING;
   hp.filter_fun = KiriKiriZ4Filter;
+  if (asaflag) {
+    hp.offset = pusha_edx_off -4;
+    hp.filter_fun = KiriKiriZ4FilterAsaSP;
+  }
   ConsoleOutput("vnreng: INSERT KiriKiriZ4");
   NewHook(hp, "KiriKiriZ4");
 

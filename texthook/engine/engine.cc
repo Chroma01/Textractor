@@ -16460,8 +16460,75 @@ static bool InsertNewPal2Hook()
   NewHook(hp, "Pal");
   return true;
 }
+
+bool Pal3Filter(LPVOID data, DWORD *size, HookParam *, BYTE)
+{
+  // 参考 cratri_try.exe :$5EDA0
+  auto text = reinterpret_cast<LPSTR>(data);
+  auto len = reinterpret_cast<size_t *>(size);
+
+  StringCharReplacer(text, len, "<br>", 4, '\n'); //换行
+
+  StringFilter(text, len, "<center>", 8); //居中
+
+  StringFilterBetween(text, len, "<s", 2, ">", 1); //大小?
+  StringFilter(text, len, "</s>", 4);
+
+  StringFilter(text, len, "<g>", 3); //字体?
+  StringFilter(text, len, "</g>", 4);
+
+  StringFilter(text, len, "<reset>", 7); //默认字体色?
+
+  StringFilterBetween(text, len, "<d", 2, ">", 1); //特殊文本?
+  StringFilter(text, len, "</d>", 4);
+  StringFilterBetween(text, len, "<r>", 3, "</r>", 4); //ruby
+
+  StringFilterBetween(text, len, "<c", 2, ">", 1); //色
+  StringFilter(text, len, "</c>", 4);
+
+  //缺少规则? 请报告问题
+
+  return true;
+}
+
+static bool InsertNewPal3Hook()
+{
+  // TamoSys(T-ScriptSystem)?
+  // by Chenx221
+    /*
+    * Sample games:
+    * https://vndb.org/v57740 (trial)
+    * https://vndb.org/v55293
+    * https://vndb.org/v51363
+    */
+
+  const BYTE bytes[] = {
+    0xCC,				// int3
+    0x55,				// push ebp	// hook here
+    0x8B, 0xEC,				// mov ebp,esp
+    0x81, 0xEC, 0xDC, 0x00, 0x00, 0x00,	// sub esp, DC
+    0xA1, XX4				// mov eax, dword ptr ds:[DF9008]
+  };
+  ULONG range = min(processStopAddress - processStartAddress, MAX_REL_ADDR);
+  ULONG addr = MemDbg::findBytes(bytes, sizeof(bytes), processStartAddress, processStartAddress + range);
+  if (!addr) {
+    ConsoleOutput("vnreng:Pal3: pattern not found");
+    return false;
+  }
+
+  HookParam hp = {};
+  hp.address = addr + 1;
+  hp.offset = pusha_edx_off -4;
+  hp.length_offset = 0;
+  hp.type = USING_STRING;
+  hp.filter_fun = Pal3Filter;
+  ConsoleOutput("vnreng: INSERT Pal3");
+  NewHook(hp, "Pal3");
+  return true;
+}
+
 bool InsertPalHook() // use Old Pal first, which does not have ruby
-{ 
+{
 	PcHooks::hookOtherPcFunctions();
 	HookParam hp = {};
 	hp.type = USING_STRING | MODULE_OFFSET | FUNCTION_OFFSET;
@@ -16469,7 +16536,7 @@ bool InsertPalHook() // use Old Pal first, which does not have ruby
 	strcpy_s(hp.function, "PalFontDrawText");
 	hp.offset = 8;
 	NewHook(hp, "PalFontDrawText");
-	return InsertOldPalHook() || InsertNewPal1Hook() || InsertNewPal2Hook(); 
+	return InsertOldPalHook() || InsertNewPal1Hook() || InsertNewPal2Hook() || InsertNewPal3Hook();
 }
 
 bool InsertPONScripterHook()

@@ -8038,6 +8038,35 @@ static bool Yuris6Filter(LPVOID data, DWORD *size, HookParam *, BYTE)
 
 bool InsertYuris6Hook()
 {
+  const BYTE bytes0[] = {
+    0xA1, XX4,
+    0x8B, 0x78, XX,   // mov edi,[eax+18]      // index based XX
+    0x8A, 0x17,
+    0x47,
+    0x88, 0x16,
+    0x46,
+    0x84, 0xD2,
+    0x75, XX,
+    0xE9, XX4,        // jmp truecolors.41DEF3 // hook here
+    0xBF, XX4
+  };
+
+  ULONG range = min(processStopAddress - processStartAddress, MAX_REL_ADDR);
+  ULONG addr = MemDbg::findBytes(bytes0, sizeof(bytes0), processStartAddress, processStartAddress + range);
+  if (addr) {
+    HookParam hp = {};
+    hp.address = addr + 0x12;
+    hp.offset = pusha_eax_off - 4;
+    hp.index = *(BYTE*)(addr + 7);
+    hp.filter_fun = Yuris6Filter;
+    hp.type = USING_STRING | NO_CONTEXT | DATA_INDIRECT;
+
+    ConsoleOutput("Textractor: INSERT YU-RIS 6a");
+    NewHook(hp, "YU-RIS6a");
+
+    return true;
+  }
+
   //by Blu3train
   /*
   * Sample games:
@@ -8057,8 +8086,7 @@ bool InsertYuris6Hook()
     0x84, 0xD2           // test dl,dl
   };
 
-  ULONG range = min(processStopAddress - processStartAddress, MAX_REL_ADDR);
-  ULONG addr = MemDbg::findBytes(bytes, sizeof(bytes), processStartAddress, processStartAddress + range);
+  addr = MemDbg::findBytes(bytes, sizeof(bytes), processStartAddress, processStartAddress + range);
   if (!addr)
     return false;
 

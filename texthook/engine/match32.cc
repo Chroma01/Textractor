@@ -141,6 +141,11 @@ bool DetermineEngineByFile1()
 		InsertPONScripterHooks();
 		return true;
 	}
+  if (Util::SearchResourceString(L"Animation Game System"))
+  {
+    InsertAnimationGSHook();
+    return true;
+  }
 	if (Util::SearchResourceString(L"HorkEye")) { // appear in copyright: Copyright (C) HorkEye, http://horkeye.com
 	  InsertHorkEyeHook();
 		return true;

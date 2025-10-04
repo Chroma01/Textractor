@@ -18113,6 +18113,50 @@ bool InsertHorkEyeHook()
   
 }
 
+bool InsertAnimationGSHook()
+{
+  // Thanks to Zero-G-Sys
+  // https://github.com/Artikash/Textractor/discussions/943#discussioncomment-14589671
+
+  // Tested game:
+  // In Series
+  // https://vndb.org/v1690
+  // https://vndb.org/v1688
+  // https://vndb.org/v1689
+  // https://vndb.org/v1692
+  // https://vndb.org/v1694 // 补丁有点问题打不开游戏, 理论支持
+  // https://vndb.org/v1693
+
+  const BYTE bytes[] =
+  {
+    0xC1, 0xE0, 0x08,
+    0x03, 0xC1,
+    0x66, 0x89, 0x04, 0xD5, XX4		// hook here
+  };
+
+//0040C1A0       | 66:0FB680 214C4600             | movzx ax,byte ptr ds:[eax+464C21]                         |
+//0040C1A8       | 66:0FB6C9                      | movzx cx,cl                                               |
+//0040C1AC       | 8D1452                         | lea edx,dword ptr ds:[edx+edx*2]                          |
+//0040C1AF       | 66:83C3 02                     | add bx,2                                                  |
+//0040C1B3       | C1E0 08                        | shl eax,8                                                 |
+//0040C1B6       | 03C1                           | add eax,ecx                                               |
+//0040C1B8       | 66:8904D5 C8524700             | mov word ptr ds:[edx*8+4752C8],ax                         |
+
+  if(auto addr=MemDbg::findBytes(bytes, sizeof(bytes), processStartAddress, processStopAddress)){
+    HookParam hp = {};
+    hp.address = addr + 5;
+    hp.offset = pusha_eax_off - 4;
+    hp.length_offset = 1;
+    ConsoleOutput("Textractor: INSERT AnimationGS");
+    NewHook(hp, "AnimationGSHook");
+    return true;
+  }
+
+  ConsoleOutput("vnreng:AnimationGS: pattern not found");
+  return false;
+
+}
+
 		std::vector<DWORD> findrelativecall(const BYTE* pattern ,int length,DWORD calladdress,DWORD start, DWORD end)
 		{
 			std::vector<DWORD> save;

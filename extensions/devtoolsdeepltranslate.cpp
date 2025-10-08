@@ -168,47 +168,50 @@ std::wstring removeHtmlTags(const std::wstring& text) {
 	std::wregex tag_re(L"<[^>]*>");
 	return std::regex_replace(text, tag_re, L"");
 }
-std::wstring escapeJsString(const std::wstring& text) {
-	std::wstring escaped_text;
-	escaped_text.reserve(text.length() * 2);
-
-	for (wchar_t c : text) {
-		switch (c) {
-			case L'\\':
-				escaped_text += L"\\\\";
-				break;
-			case L'"':
-				escaped_text += L"\\\"";
-				break;
-			case L'\'':
-				escaped_text += L"\\'";
-				break;
-			case L'\n':
-				escaped_text += L"\\n";
-				break;
-			case L'\r':
-				escaped_text += L"\\r";
-				break;
-			default:
-				escaped_text += c;
-				break;
+std::wstring base64Encode(const std::wstring& text) {
+	std::string utf8;
+	if (!text.empty()) {
+		int len = WideCharToMultiByte(CP_UTF8, 0, text.c_str(), -1, nullptr, 0, nullptr, nullptr);
+		if (len > 1) {
+			utf8.resize(len - 1);
+			WideCharToMultiByte(CP_UTF8, 0, text.c_str(), -1, &utf8[0], len, nullptr, nullptr);
 		}
 	}
-	return escaped_text;
+
+	const std::string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+	std::string result;
+	int val = 0, valb = -6;
+	for (unsigned char c : utf8) {
+		val = (val << 8) + c;
+		valb += 8;
+		while (valb >= 0) {
+			result.push_back(chars[(val >> valb) & 0x3F]);
+			valb -= 6;
+		}
+	}
+	if (valb > -6) result.push_back(chars[((val << 8) >> (valb + 8)) & 0x3F]);
+	while (result.size() % 4) result.push_back('=');
+
+	return std::wstring(result.begin(), result.end());
 }
 
-
-std::pair<bool, std::wstring> Translate(const std::wstring& text, TranslationParam tlp)
-{
+static bool flag = false;
+std::pair<bool, std::wstring> Translate(const std::wstring& text, TranslationParam tlp) {
 	if (!DevTools::Connected()) return { false, FormatString(L"%s: %s", TRANSLATION_ERROR, ERROR_START_CHROME) };
 	// DevTools can't handle concurrent translations yet
 	static std::mutex translationMutex;
 	std::scoped_lock lock(translationMutex);
+
 	std::wstring escaped; // DeepL breaks with slash in input
 	for (auto ch : text) ch == '/' ? escaped += L"\\/" : escaped += ch;
 	DevTools::SendRequest("Page.navigate", FormatString(LR"({"url":"https://www.deepl.com/en/translator#%s/%s/%s"})", (tlp.translateFrom == L"?") ? codes.at(tlp.translateFrom) : codes.at(tlp.translateFrom).substr(0, 2), codes.at(tlp.translateTo),Escape(escaped)));
-	DevTools::SendRequest("Runtime.evaluate",LR"({"expression":"document.querySelector('[data-testid=translator-target-input] div[contenteditable=true]').innerHTML = '';","returnByValue":false})");
-	DevTools::SendRequest("Runtime.evaluate",FormatString(LR"({"expression":"document.querySelector('[data-testid=translator-source-input] div[contenteditable=true]').innerHTML = '%s';","returnByValue":false})",escapeJsString(removeHtmlTags(text))));
+	if (flag) {
+		DevTools::SendRequest("Runtime.evaluate",LR"({"expression":"document.querySelector('[data-testid=translator-target-input] div[contenteditable=true]').innerHTML = '';","returnByValue":false})");
+		DevTools::SendRequest("Runtime.evaluate",LR"({"expression":"document.querySelector('[data-testid=translator-source-input] div[contenteditable=true]').innerHTML = '';","returnByValue":false})");
+		DevTools::SendRequest("Runtime.evaluate",LR"({"expression":"document.querySelector('[data-testid=translator-source-input] div[contenteditable=true]').dispatchEvent(new Event('input', { bubbles: true }));","returnByValue":false})");
+	}
+	flag = true;
+	DevTools::SendRequest("Runtime.evaluate", FormatString(LR"({"expression":"document.querySelector('[data-testid=translator-source-input] div[contenteditable=true]').textContent = new TextDecoder().decode(Uint8Array.from(atob('%s'), c => c.charCodeAt(0)));","returnByValue":true})", base64Encode(removeHtmlTags(text))));
 	DevTools::SendRequest("Runtime.evaluate",LR"({"expression":"document.querySelector('[data-testid=translator-source-input] div[contenteditable=true]').dispatchEvent(new Event('input', { bubbles: true }));","returnByValue":false})");
 
 	for (int retry = 0; ++retry < 100; Sleep(100))

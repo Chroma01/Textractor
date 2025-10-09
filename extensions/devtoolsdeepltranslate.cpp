@@ -42,6 +42,7 @@ extern const QStringList languagesTo
 			"Slovak",
 			"Slovenian",
 			"Spanish",
+			"Spanish (Latin American)",
 			"Swedish",
 			"Turkish",
 			"Ukrainian",
@@ -87,16 +88,16 @@ extern const std::unordered_map<std::wstring, std::wstring> codes
 	{{L"Arabic"}, {L"ar"}},
 	{{L"Bulgarian"}, {L"bg"}},
 	{{L"Chinese"}, {L"zh"}},
-	{{L"Chinese (simplified)"}, {L"zh-hans"}},
-	{{L"Chinese (traditional)"}, {L"zh-hant"}},
+	{{L"Chinese (simplified)"}, {L"zh-Hans"}},
+	{{L"Chinese (traditional)"}, {L"zh-Hant"}},
 	{{L"Czech"}, {L"cs"}},
 	{{L"Danish"}, {L"da"}},
 	{{L"Dutch"}, {L"nl"}},
 	{{L"German"}, {L"de"}},
 	{{L"Greek"}, {L"el"}},
 	{{L"English"}, {L"en"}},
-	{{L"English (British)"}, {L"en-gb"}},
-	{{L"English (American)"}, {L"en-us"}},
+	{{L"English (British)"}, {L"en-GB"}},
+	{{L"English (American)"}, {L"en-US"}},
 	{{L"Spanish"}, {L"es"}},
 	{{L"Estonian"}, {L"et"}},
 	{{L"Finnish"}, {L"fi"}},
@@ -112,13 +113,14 @@ extern const std::unordered_map<std::wstring, std::wstring> codes
 	{{L"Norwegian"}, {L"nb"}},
 	{{L"Polish"}, {L"pl"}},
 	{{L"Portuguese"}, {L"pt"}},
-	{{L"Portuguese (Brazilian)"}, {L"pt-br"}},
-	{{L"Portuguese (target)"}, {L"pt-pt"}},
+	{{L"Portuguese (Brazilian)"}, {L"pt-BR"}},
+	{{L"Portuguese (target)"}, {L"pt-PT"}},
 	{{L"Romanian"}, {L"ro"}},
 	{{L"Russian"}, {L"ru"}},
 	{{L"Slovak"}, {L"sk"}},
 	{{L"Slovenian"}, {L"sl"}},
 	{{L"Spanish"}, {L"es"}},
+	{{L"Spanish (Latin American)"}, {L"es-419"}},
 	{{L"Swedish"}, {L"sv"}},
 	{{L"Turkish"}, {L"tr"}},
 	{{L"Ukrainian"}, {L"uk"}},
@@ -196,33 +198,127 @@ std::wstring base64Encode(const std::wstring& text) {
 }
 
 static bool flag = false;
+static bool elementsReady = false;
+static std::wstring lastSourceLang = L"";
+static std::wstring lastTargetLang = L"";
+
+bool SetSourceLanguage(const std::wstring& sourceLangCode) {
+    if (sourceLangCode == L"auto") return true;
+
+    DevTools::SendRequest("Runtime.evaluate",
+        LR"D({"expression":"document.querySelector('[data-testid=translator-source-lang-btn]').click();","returnByValue":false})D");
+    Sleep(500);
+
+    bool sourceOptionReady = false;
+    for (int waitTime = 0; waitTime < 5000; waitTime += 200) {
+        Sleep(200);
+        auto result = DevTools::SendRequest("Runtime.evaluate",
+            FormatString(LR"D({"expression":"!!document.querySelector('[data-testid=translator-lang-option-%s]')","returnByValue":true})D", sourceLangCode.c_str()));
+
+        if (auto optionExists = Copy(result[L"result"][L"value"].Boolean())) {
+            if (optionExists.value()) {
+                sourceOptionReady = true;
+                break;
+            }
+        }
+    }
+
+    if (!sourceOptionReady) return false;
+
+    DevTools::SendRequest("Runtime.evaluate",
+        FormatString(LR"D({"expression":"document.querySelector('[data-testid=translator-lang-option-%s]').click();","returnByValue":false})D", sourceLangCode.c_str()));
+    Sleep(300);
+    return true;
+}
+
+bool SetTargetLanguage(const std::wstring& targetLangCode) {
+    DevTools::SendRequest("Runtime.evaluate",
+        LR"D({"expression":"document.querySelector('[data-testid=translator-target-lang-btn]').click();","returnByValue":false})D");
+    Sleep(500);
+
+    bool targetOptionReady = false;
+    for (int waitTime = 0; waitTime < 10000; waitTime += 200) {
+        Sleep(200);
+        auto result = DevTools::SendRequest("Runtime.evaluate",
+            FormatString(LR"D({"expression":"!!document.querySelector('[data-testid=translator-lang-option-%s]')","returnByValue":true})D", targetLangCode.c_str()));
+
+        if (auto optionExists = Copy(result[L"result"][L"value"].Boolean())) {
+            if (optionExists.value()) {
+                targetOptionReady = true;
+                break;
+            }
+        }
+    }
+
+    if (!targetOptionReady) return false;
+
+    DevTools::SendRequest("Runtime.evaluate",
+        FormatString(LR"D({"expression":"document.querySelector('[data-testid=translator-lang-option-%s]').click();","returnByValue":false})D", targetLangCode.c_str()));
+    Sleep(300);
+    return true;
+}
+
 std::pair<bool, std::wstring> Translate(const std::wstring& text, TranslationParam tlp) {
-	if (!DevTools::Connected()) return { false, FormatString(L"%s: %s", TRANSLATION_ERROR, ERROR_START_CHROME) };
-	// DevTools can't handle concurrent translations yet
-	static std::mutex translationMutex;
-	std::scoped_lock lock(translationMutex);
+    if (!DevTools::Connected()) return { false, FormatString(L"%s: %s", TRANSLATION_ERROR, ERROR_START_CHROME) };
+    // DevTools can't handle concurrent translations yet
+    static std::mutex translationMutex;
+    std::scoped_lock lock(translationMutex);
 
-	std::wstring escaped; // DeepL breaks with slash in input
-	for (auto ch : text) ch == '/' ? escaped += L"\\/" : escaped += ch;
-	DevTools::SendRequest("Page.navigate", FormatString(LR"({"url":"https://www.deepl.com/en/translator#%s/%s/%s"})", (tlp.translateFrom == L"?") ? codes.at(tlp.translateFrom) : codes.at(tlp.translateFrom).substr(0, 2), codes.at(tlp.translateTo),Escape(escaped)));
-	if (flag) {
-		DevTools::SendRequest("Runtime.evaluate",LR"({"expression":"document.querySelector('[data-testid=translator-target-input] div[contenteditable=true]').innerHTML = '';","returnByValue":false})");
-		DevTools::SendRequest("Runtime.evaluate",LR"({"expression":"document.querySelector('[data-testid=translator-source-input] div[contenteditable=true]').innerHTML = '';","returnByValue":false})");
-		DevTools::SendRequest("Runtime.evaluate",LR"({"expression":"document.querySelector('[data-testid=translator-source-input] div[contenteditable=true]').dispatchEvent(new Event('input', { bubbles: true }));","returnByValue":false})");
+    std::wstring escaped; // DeepL breaks with slash in input
+    for (auto ch : text) ch == '/' ? escaped += L"\\/" : escaped += ch;
+    DevTools::SendRequest("Page.navigate", FormatString(LR"({"url":"https://www.deepl.com/en/translator#%s/%s/%s"})", (tlp.translateFrom == L"?") ? codes.at(tlp.translateFrom) : codes.at(tlp.translateFrom).substr(0, 2), codes.at(tlp.translateTo),Escape(escaped)));
+
+    if(!elementsReady)
+    {
+        for (int waitTime = 0; waitTime < 10000; waitTime += 200) {
+            auto result = DevTools::SendRequest("Runtime.evaluate",
+                LR"D({"expression":"!!(document.querySelector('[data-testid=translator-source-input] div[contenteditable=true]') && document.querySelector('[data-testid=translator-source-lang-btn]') && document.querySelector('[data-testid=translator-target-lang-btn]'))","returnByValue":true})D");
+
+            if (auto elementExists = Copy(result[L"result"][L"value"].Boolean())) {
+                if (elementExists.value()) {
+                    elementsReady = true;
+                    break;
+                }
+            }
+            Sleep(200);
+        }
+
+        if (!elementsReady) {
+            return { false, FormatString(L"%s: Something's wrong, please try again after ensuring the page has fully loaded.", TRANSLATION_ERROR) };
+        }
+    }
+
+    if (flag) {
+        DevTools::SendRequest("Runtime.evaluate",LR"({"expression":"document.querySelector('[data-testid=translator-target-input] div[contenteditable=true]').innerHTML = '';","returnByValue":false})");
+        DevTools::SendRequest("Runtime.evaluate",LR"({"expression":"document.querySelector('[data-testid=translator-source-input] div[contenteditable=true]').innerHTML = '';","returnByValue":false})");
+        DevTools::SendRequest("Runtime.evaluate",LR"({"expression":"document.querySelector('[data-testid=translator-source-input] div[contenteditable=true]').dispatchEvent(new Event('input', { bubbles: true }));","returnByValue":false})");
+    }
+	std::wstring currentSourceLang = (tlp.translateFrom == L"?") ? L"auto" : codes.at(tlp.translateFrom).substr(0, 2);
+	std::wstring currentTargetLang = codes.at(tlp.translateTo);
+
+	if (currentSourceLang != lastSourceLang) {
+		SetSourceLanguage(currentSourceLang);
+		lastSourceLang = currentSourceLang;
 	}
-	flag = true;
-	DevTools::SendRequest("Runtime.evaluate", FormatString(LR"({"expression":"document.querySelector('[data-testid=translator-source-input] div[contenteditable=true]').textContent = new TextDecoder().decode(Uint8Array.from(atob('%s'), c => c.charCodeAt(0)));","returnByValue":true})", base64Encode(removeHtmlTags(text))));
-	DevTools::SendRequest("Runtime.evaluate",LR"({"expression":"document.querySelector('[data-testid=translator-source-input] div[contenteditable=true]').dispatchEvent(new Event('input', { bubbles: true }));","returnByValue":false})");
 
-	for (int retry = 0; ++retry < 100; Sleep(100))
-		if (auto translation = Copy(DevTools::SendRequest("Runtime.evaluate",
-			LR"({"expression":"document.querySelector('[data-testid=translator-target-input]').textContent.trim() ","returnByValue":true})"
-		)[L"result"][L"value"].String()))
-			if (!translation->empty()) {
-				return { true, htmlDecode(translation.value()) };
-			}
-	if (auto errorMessage = Copy(DevTools::SendRequest("Runtime.evaluate",
-		LR"({"expression":"document.querySelector('div.lmt__system_notification').innerHTML","returnByValue":true})"
-	)[L"result"][L"value"].String())) return { false, FormatString(L"%s: %s", TRANSLATION_ERROR, errorMessage.value()) };
-	return { false, TRANSLATION_ERROR };
+	if (currentTargetLang != lastTargetLang) {
+		SetTargetLanguage(currentTargetLang);
+		lastTargetLang = currentTargetLang;
+	}
+
+    flag = true;
+    DevTools::SendRequest("Runtime.evaluate", FormatString(LR"({"expression":"document.querySelector('[data-testid=translator-source-input] div[contenteditable=true]').textContent = new TextDecoder().decode(Uint8Array.from(atob('%s'), c => c.charCodeAt(0)));","returnByValue":true})", base64Encode(removeHtmlTags(text))));
+    DevTools::SendRequest("Runtime.evaluate",LR"({"expression":"document.querySelector('[data-testid=translator-source-input] div[contenteditable=true]').dispatchEvent(new Event('input', { bubbles: true }));","returnByValue":false})");
+
+    for (int retry = 0; ++retry < 100; Sleep(100))
+        if (auto translation = Copy(DevTools::SendRequest("Runtime.evaluate",
+            LR"({"expression":"document.querySelector('[data-testid=translator-target-input]').textContent.trim() ","returnByValue":true})"
+        )[L"result"][L"value"].String()))
+            if (!translation->empty()) {
+                return { true, htmlDecode(translation.value()) };
+            }
+    if (auto errorMessage = Copy(DevTools::SendRequest("Runtime.evaluate",
+        LR"({"expression":"document.querySelector('div.lmt__system_notification').innerHTML","returnByValue":true})"
+    )[L"result"][L"value"].String())) return { false, FormatString(L"%s: %s", TRANSLATION_ERROR, errorMessage.value()) };
+    return { false, TRANSLATION_ERROR };
 }

@@ -1396,7 +1396,7 @@ namespace Engine
 				auto text = reinterpret_cast<char*>(str);
 				size_t len = *size;
 
-				std::regex pattern(R"(<r.*?>|<\/r>|<FS.*?>)");
+				std::regex pattern(R"(<[rc].*?>|<\/[rc]>|<FS.*?>)");
 				RegexReplacer(text, &len, pattern, "");
 				*size = len;
 				return true;

@@ -29,7 +29,7 @@ extern const QStringList languagesTo
 	"Korean",
 	"Lithuanian",
 	"Latvian",
-	"Norwegian Bokmål",
+	"Norwegian Bokmï¿½l",
 	"Dutch",
 	"Polish",
 	"Portuguese (backward compatibility)",
@@ -67,7 +67,7 @@ languagesFrom
 	"Korean",
 	"Latvian",
 	"Lithuanian",
-	"Norwegian Bokmål",
+	"Norwegian Bokmï¿½l",
 	"Polish",
 	"Portuguese (all Portuguese variants)",
 	"Romanian",
@@ -102,7 +102,7 @@ extern const std::unordered_map<std::wstring, std::wstring> codes
 	{ { L"Korean" }, { L"KO" } },
 	{ { L"Lithuanian" }, { L"LT" } },
 	{ { L"Latvian" }, { L"LV" } },
-	{ { L"Norwegian Bokmål" }, { L"NB" } },
+	{ { L"Norwegian Bokmï¿½l" }, { L"NB" } },
 	{ { L"Dutch" }, { L"NL" } },
 	{ { L"Polish" }, { L"PL" } },
 	{ { L"Portuguese (all Portuguese variants)" }, { L"PT" } },
@@ -134,27 +134,30 @@ std::pair<bool, std::wstring> Translate(const std::wstring& text, TranslationPar
 {
 	if (!tlp.authKey.empty())
 	{
-		std::string translateFromComponent = tlp.translateFrom == L"?" ? "" : "&source_lang=" + WideStringToString(codes.at(tlp.translateFrom));
 		if (HttpRequest httpRequest{
 			L"Mozilla/5.0 Textractor",
 			tlp.authKey.find(L":fx") == std::string::npos ? L"api.deepl.com" : L"api-free.deepl.com",
 			L"POST",
 			keyType == CAT ? L"/v1/translate" : L"/v2/translate",
-			FormatString("text=%S&auth_key=%S&target_lang=%S", Escape(text), tlp.authKey, codes.at(tlp.translateTo)) + translateFromComponent,
-			L"Content-Type: application/x-www-form-urlencoded"
+			tlp.translateFrom == L"?" ? FormatString(R"({"text": ["%s"], "target_lang": "%S"})", JSON::Escape(WideStringToString(text)), codes.at(tlp.translateTo)) : FormatString(R"({"text": ["%s"], "target_lang": "%S", "source_lang": "%S"})", JSON::Escape(WideStringToString(text)), codes.at(tlp.translateTo), codes.at(tlp.translateFrom)),
+			FormatString(L"Content-Type: application/json\r\nAuthorization: DeepL-Auth-Key %s", tlp.authKey).c_str()
 		}; httpRequest && (httpRequest.response.find(L"translations") != std::string::npos || (httpRequest = HttpRequest{
 			L"Mozilla/5.0 Textractor",
 			tlp.authKey.find(L":fx") == std::string::npos ? L"api.deepl.com" : L"api-free.deepl.com",
 			L"POST",
 			(keyType = !keyType) == CAT ? L"/v1/translate" : L"/v2/translate",
-			FormatString("text=%S&auth_key=%S&target_lang=%S", Escape(text), tlp.authKey, codes.at(tlp.translateTo)) + translateFromComponent,
-			L"Content-Type: application/x-www-form-urlencoded"
+			tlp.translateFrom == L"?" ? FormatString(R"({"text": ["%s"], "target_lang": "%S"})", JSON::Escape(WideStringToString(text)), codes.at(tlp.translateTo)) : FormatString(R"({"text": ["%s"], "target_lang": "%S", "source_lang": "%S"})", JSON::Escape(WideStringToString(text)), codes.at(tlp.translateTo), codes.at(tlp.translateFrom)),
+			FormatString(L"Content-Type: application/json\r\nAuthorization: DeepL-Auth-Key %s", tlp.authKey).c_str()
 		})))
 			// Response formatted as JSON: translation starts with text":" and ends with "}]
 			if (auto translation = Copy(JSON::Parse(httpRequest.response)[L"translations"][0][L"text"].String())) return { true, translation.value() };
 			else return { false, FormatString(L"%s: %s", TRANSLATION_ERROR, httpRequest.response) };
 		else return { false, FormatString(L"%s (code=%u)", TRANSLATION_ERROR, httpRequest.errorCode) };
 	}
+
+	return { false, FormatString(L"%s, An API key is required to use this extension.", TRANSLATION_ERROR) };
+	// The original key-free solution is no longer working, but if you have a new idea, you can share it with me.
+
 
 	// the following code was reverse engineered from the DeepL website; it's as close as I could make it but I'm not sure what parts of this could be removed and still have it work
 	int id = 10000 * std::uniform_int_distribution(0, 9999)(std::random_device()) + 1;

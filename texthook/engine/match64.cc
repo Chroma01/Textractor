@@ -1468,6 +1468,41 @@ namespace Engine
 		return false;
 	}
 
+	bool InsertUnityIl2GameSpHook() {
+		HMODULE module = GetModuleHandleW(L"GameAssembly.dll");
+		auto [minAddress, maxAddress] = Util::QueryModuleLimits(module);
+
+		// Mahou Shoujo no Majo Saiban (Steam)
+		// https://vndb.org/v50283
+		// Naninovel_UI_UITextPrinterPanel__FormatMessage
+		if (Util::CheckFile(L"manosaba.exe") && Util::CheckFile(L"manosaba_Data")) {
+			const BYTE bytes[] = {
+				0x48, 0x89, 0x45, 0x10, 0x4C, 0x8D, 0x25, XX4, 0x44, 0x39, 0x35 //, XX4
+			};
+			for (auto addr: Util::SearchMemory(bytes, sizeof(bytes), PAGE_EXECUTE, minAddress, maxAddress)) {
+				HookParam hp = {};
+				hp.address = addr;
+				hp.type = USING_STRING | USING_UNICODE | NO_CONTEXT;
+				hp.offset = pusha_rax_off - 4;
+				hp.padding = 0x14;
+				hp.filter_fun = [](LPVOID data, DWORD* size, HookParam*, BYTE)
+				{
+					auto text = static_cast<LPWSTR>(data);
+					auto len =  static_cast<size_t>(*size);
+					std::wregex pattern(LR"(<[^>]+?>)");
+					RegexReplacerW(text, &len, pattern, L"");
+					*size = static_cast<DWORD>(len);
+					return true;
+				};
+				NewHook(hp, "Unity_IL2cpp_SP_manosaba");
+				ConsoleOutput("Insert: Unity IL2cpp Game SP Hook (manosaba)");
+				return true;
+			}
+		}
+
+		return false;
+	}
+
 	bool InsertSakanaGLHook() {
 		//by Chenx221
 		/*
@@ -1657,6 +1692,7 @@ namespace Engine
 		{
 			ConsoleOutput("Textractor: Precompiled Unity found (searching for hooks should work)");
 			InsertUnityIL2TMPHook();
+			InsertUnityIl2GameSpHook();
 			wcscpy_s(spDefault.boundaryModule, L"GameAssembly.dll");
 			spDefault.padding = 20;
 			return true;

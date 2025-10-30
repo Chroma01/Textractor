@@ -307,7 +307,8 @@ std::pair<bool, std::wstring> Translate(const std::wstring& text, TranslationPar
 
 	static std::atomic<int> i = 0;
 	static Synchronized<std::wstring> token;
-	if (token->empty()) if (HttpRequest httpRequest{ L"Mozilla/5.0 Textractor", L"www.bing.com", L"GET", L"translator" })
+	// Potential issue: Mainland China users may be redirected from www.bing.com to cn.bing.com, which is inaccessible outside the region.
+	if (token->empty()) if (HttpRequest httpRequest{ L"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Textractor", L"www.bing.com", L"GET", L"translator" })
 	{
 		std::wstring tokenBuilder;
 		if (auto tokenPos = httpRequest.response.find(L"[" + std::to_wstring(time(nullptr) / 100)); tokenPos != std::string::npos)
@@ -322,7 +323,7 @@ std::pair<bool, std::wstring> Translate(const std::wstring& text, TranslationPar
 	else return { false, FormatString(L"%s: could not acquire token", TRANSLATION_ERROR) };
 
 	if (HttpRequest httpRequest{
-		L"Mozilla/5.0 Textractor",
+		L"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Textractor",
 		L"www.bing.com",
 		L"POST",
 		FormatString(L"/ttranslatev3?fromLang=%s&to=%s&text=%s%s.%d", codes.at(tlp.translateFrom), codes.at(tlp.translateTo), Escape(text), token.Copy(), i++).c_str()
@@ -331,3 +332,36 @@ std::pair<bool, std::wstring> Translate(const std::wstring& text, TranslationPar
 		else return { false, FormatString(L"%s (token=%s): %s", TRANSLATION_ERROR, std::exchange(token.Acquire().contents, L""), httpRequest.response) };
 	else return { false, FormatString(L"%s (code=%u)", TRANSLATION_ERROR, httpRequest.errorCode) };
 }
+
+//// This is an alternative request format that achieves the same result as the one above, so I've commented it out and placed it here.
+// static std::atomic<int> i = 0;
+// static Synchronized<std::wstring> token;
+// static Synchronized<std::wstring> token2;
+// if (token->empty() || token2->empty()) if (HttpRequest httpRequest{ L"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Textractor", L"www.bing.com", L"GET", L"translator" })
+// {
+// 	std::wstring tokenBuilder;
+// 	std::wstring tokenBuilder2;
+// 	if (auto tokenPos = httpRequest.response.find(L"[" + std::to_wstring(time(nullptr) / 100)); tokenPos != std::string::npos)
+// 		tokenBuilder2 = FormatString(L"&key=%s&token=%s", httpRequest.response.substr(tokenPos + 1, 13), httpRequest.response.substr(tokenPos + 16, 32));
+// 	if (auto tokenPos = httpRequest.response.find(L"IG:\""); tokenPos != std::string::npos)
+// 		tokenBuilder = L"IG=" + httpRequest.response.substr(tokenPos + 4, 32);
+// 	if (auto tokenPos = httpRequest.response.find(L"data-iid=\""); tokenPos != std::string::npos)
+// 		tokenBuilder += L"&IID=" + httpRequest.response.substr(tokenPos + 10, 15);
+// 	if (!tokenBuilder.empty() && !tokenBuilder2.empty()) {
+// 		token->assign(tokenBuilder);
+// 		token2->assign(tokenBuilder2);
+// 	}
+// 	else return { false, FormatString(L"%s: %s\ntoken not found", TRANSLATION_ERROR, httpRequest.response) };
+// }
+// else return { false, FormatString(L"%s: could not acquire token", TRANSLATION_ERROR) };
+//
+// auto target = FormatString(L"/ttranslatev3?%s.%d", token.Copy(), i++);
+// auto body = FormatString(R"(fromLang=%S&to=%S&text=%S%S)",codes.at(tlp.translateFrom), codes.at(tlp.translateTo), Escape(text), token2.Copy() );
+// if (HttpRequest httpRequest{
+// 	L"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Textractor",
+// 	L"www.bing.com",
+// 	L"POST",
+// 	target.c_str(),
+// 	body,
+// 	L"Content-Type: application/x-www-form-urlencoded"
+// })

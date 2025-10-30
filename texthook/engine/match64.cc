@@ -1447,10 +1447,11 @@ namespace Engine
 	}
 
 	bool InsertUnityIL2TMPHook() {
+		// TMPro_TMP_Text__set_text
 		const BYTE bytes[] = {
 			0xCC, 0x48, 0x89, 0x5C, 0x24, 0x08, 0x57, 0x48, 0x83, 0xEC, 0x20, 0x80, 0xB9, 0xE8, 0x00, 0x00, 0x00, 0x00
 		};
-
+		bool flag = false;
 		HMODULE module = GetModuleHandleW(L"GameAssembly.dll");
 		auto [minAddress, maxAddress] = Util::QueryModuleLimits(module);
 		for (auto addr: Util::SearchMemory(bytes, sizeof(bytes), PAGE_EXECUTE, minAddress, maxAddress)) {
@@ -1459,11 +1460,48 @@ namespace Engine
 			hp.type = USING_STRING | USING_UNICODE;
 			hp.offset = pusha_rdx_off - 4;
 			hp.padding = 0x14;
-			NewHook(hp, "TMPro_Text");
+			hp.filter_fun = [](LPVOID data, DWORD* size, HookParam*, BYTE)
+			{
+				auto text = static_cast<LPWSTR>(data);
+				auto len =  static_cast<size_t>(*size);
+				if (len == 0)
+					return false;
+				std::wregex pattern(LR"(<[^>]+?>)");
+				RegexReplacerW(text, &len, pattern, L"");
+				*size = static_cast<DWORD>(len);
+				return true;
+			};
+			NewHook(hp, "TMPro_set_text");
 			ConsoleOutput("Insert: Unity IL2cpp TMPro Text Hook");
-			return true;
+			flag = true;
 		}
 
+		// TMPro_TMP_Text__SetText
+		const BYTE bytes2[] = {
+			0xCC, 0x48, 0x89, 0x5C, 0x24, 0x08, 0x57, 0x48, 0x83, 0xEC, 0x30, 0x48, 0x8B, 0xFA, 0x48, 0x8B, 0xD9, 0x48, 0x85, 0xD2, 0x75
+		};
+		for (auto addr: Util::SearchMemory(bytes2, sizeof(bytes2), PAGE_EXECUTE, minAddress, maxAddress)) {
+			HookParam hp = {};
+			hp.address = addr + 1;
+			hp.type = USING_STRING | USING_UNICODE;
+			hp.offset = pusha_rdx_off - 4;
+			hp.padding = 0x14;
+			hp.filter_fun = [](LPVOID data, DWORD* size, HookParam*, BYTE)
+			{
+				auto text = static_cast<LPWSTR>(data);
+				auto len =  static_cast<size_t>(*size);
+				if (len == 0)
+					return false;
+				std::wregex pattern(LR"(<[^>]+?>)");
+				RegexReplacerW(text, &len, pattern, L"");
+				*size = static_cast<DWORD>(len);
+				return true;
+			};
+			NewHook(hp, "TMPro_SetText");
+			ConsoleOutput("Insert: Unity IL2cpp TMPro Text Hook2");
+			flag = true;
+		}
+		if (flag) return flag;
 		ConsoleOutput("Textractor:UnityIL2TMPHook: pattern not found");
 		return false;
 	}

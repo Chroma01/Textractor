@@ -1179,13 +1179,16 @@ namespace Engine
 		* https://vndb.org/v31994
 		* https://vndb.org/r115756
 		*/
-		wchar_t python[] = L"python3X.dll", libpython[] = L"libpython3.X.dll";
-		for (wchar_t* name : { python, libpython })
+		const wchar_t* patterns[] = {
+			L"python3.%d.dll",
+			L"libpython3.%d.dll"
+		};
+		for (const auto& pattern : patterns)
 		{
-			wchar_t* pos = wcschr(name, L'X');
 			for (int pythonMinorVersion = 0; pythonMinorVersion <= 9; ++pythonMinorVersion)
 			{
-				*pos = L'0' + pythonMinorVersion;
+				wchar_t name[64];
+				swprintf(name, 64, pattern, pythonMinorVersion);
 				if (HMODULE module = GetModuleHandleW(name))
 				{
 					wcscpy_s(spDefault.exportModule, name);
@@ -1281,6 +1284,105 @@ namespace Engine
 					return true;
 				}
 			}
+			for (int pythonMinorVersion = 12; pythonMinorVersion <= 20; ++pythonMinorVersion)
+			{
+				wchar_t name[64];
+				swprintf(name, 64, pattern, pythonMinorVersion);
+				if (HMODULE module = GetModuleHandleW(name))
+				{
+					wcscpy_s(spDefault.exportModule, name);
+					HookParam hp = {};
+					hp.address = (uintptr_t)GetProcAddress(module, "PyUnicode_Format");
+					if (!hp.address)
+					{
+						ConsoleOutput("Textractor: Ren'py 3 failed: failed to find PyUnicode_Format");
+						return false;
+					}
+					hp.offset = pusha_rcx_off - 4; // rcx
+					hp.padding = 0x38;
+					hp.length_offset = 0;
+					hp.text_fun = [](uintptr_t rsp_base, HookParam* pHp, BYTE, uintptr_t* data, uintptr_t* split, DWORD* count)
+					{
+						uint64_t r8 = regof(r8, rsp_base);
+						uint64_t r10 = regof(r10, rsp_base);
+						uint64_t r11 = regof(r11, rsp_base);
+						// if (r10 == 0x03FF || r11 == 0x03FF || (r8 == r10 && r11 == 0x7F)) {
+							uint64_t rcx = regof(rcx, rsp_base);
+							BYTE unicode = !(*(BYTE*)(rcx + 0x20) & 0x40); // [rcx+0x20) bit 0x40 == 0
+							if (unicode) {
+								*data += 0x38; //padding
+								*count = wcslen((wchar_t*)*data) * sizeof(wchar_t);
+								return;
+							}
+						// }
+						*count = 0;
+					};
+					hp.type = USING_STRING | USING_UNICODE | NO_CONTEXT;
+					hp.filter_fun = [](LPVOID data, DWORD* size, HookParam*, BYTE)
+					{
+						auto text = reinterpret_cast<LPWSTR>(data);
+						auto len =  static_cast<size_t>(*size);
+
+						if (cpp_wcsnstr(text, L"%", len / sizeof(wchar_t)))
+							return false;
+						if (cpp_wcsnstr(text, L"{", len / sizeof(wchar_t))) {
+							WideStringCharReplacer(text, &len, L"{i}", 3, L'\'');
+							WideStringCharReplacer(text, &len, L"{/i}", 4, L'\'');
+							WideStringFilterBetween(text, &len, L"{", 1, L"}", 1);
+						}
+
+						//CP_OEMCP -The current system OEM code page
+						WideCharToMultiByte(CP_OEMCP, 0, text, -1, text_buffer, 0x1000, NULL, NULL);
+						text_buffer_length = len / sizeof(wchar_t); // saved for not unicode hook
+						*size = static_cast<DWORD>(len);
+						return true;
+					};
+					NewHook(hp, "Ren'py 3 unicode");
+
+					hp.address += 6;
+					hp.padding = 0x28;
+					hp.text_fun = [](uintptr_t rsp_base, HookParam* pHp, BYTE, uintptr_t* data, uintptr_t* split, DWORD* count)
+					{
+						uint64_t r8 = regof(r8, rsp_base);
+						uint64_t r10 = regof(r10, rsp_base);
+						uint64_t r11 = regof(r11, rsp_base);
+						// if (r10 == 0x03FF || r11 == 0x03FF || (r8 == r10 && r11 == 0x7F)) {
+							uint64_t rcx = regof(rcx, rsp_base);
+							BYTE unicode = !(*(BYTE*)(rcx + 0x20) & 0x40); // [rcx+0x20) bit 0x40 == 0
+
+							*data += unicode ? 0x38 : 0x28; //padding
+							*count = ::strlen((char*)*data);
+							if (!cpp_strnstr((char*)*data, "%", *count)) // not garbage
+								return;
+						// }
+						*count = 0;
+					};
+					hp.type = USING_STRING | NO_CONTEXT;
+					hp.filter_fun = [](LPVOID data, DWORD* size, HookParam*, BYTE)
+					{
+						auto text = reinterpret_cast<LPSTR>(data);
+						size_t len = static_cast<size_t>(*size);
+
+						if (text[0] != 0 && text[1] == 0) {
+							// text from unicode hook
+							len = text_buffer_length;
+							::memmove(text, text_buffer, len);
+						}
+						if (cpp_strnstr(text, "%", len))
+							return false;
+						if (cpp_strnstr(text, "{", len)) {
+							StringCharReplacer(text, &len, "{i}", 3, L'\'');
+							StringCharReplacer(text, &len, "{/i}", 4, L'\'');
+							StringFilterBetween(text, &len, "{", 1, "}", 1);
+						}
+						*size = static_cast<DWORD>(len);
+						return true;
+					};
+					NewHook(hp, "Ren'py 3");
+
+					return true;
+				}
+			}
 		}
 		ConsoleOutput("Textractor: Ren'py 3 failed: failed to find python3X.dll");
 		return false;
@@ -1292,13 +1394,16 @@ namespace Engine
 		/* Tested:
 		* https://vndb.org/v50148 (renpy 8.3.3)
 		*/
-		wchar_t python[] = L"python3X.dll", libpython[] = L"libpython3.X.dll";
-		for (wchar_t* name : { python, libpython })
+		const wchar_t* patterns[] = {
+			L"python3.%d.dll",
+			L"libpython3.%d.dll"
+		};
+		for (const auto& pattern : patterns)
 		{
-			wchar_t* pos = wcschr(name, L'X');
 			for (int pythonMinorVersion = 0; pythonMinorVersion <= 9; ++pythonMinorVersion)
 			{
-				*pos = L'0' + pythonMinorVersion;
+				wchar_t name[64];
+				swprintf(name, 64, pattern, pythonMinorVersion);
 				if (HMODULE module = GetModuleHandleW(name))
 				{
 					wcscpy_s(spDefault.exportModule, name);

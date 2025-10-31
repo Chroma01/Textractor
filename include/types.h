@@ -40,9 +40,16 @@ struct HookParam
 	uintptr_t padding; // padding before string
 	DWORD user_value; // 7/20/2014: jichi additional parameters for PSP games
 
+#ifndef _WIN64
 	void(*text_fun)(DWORD stack, HookParam* hp, BYTE obsoleteAlwaysZero, DWORD* data, DWORD* split, DWORD* len);
+	bool(*hook_fun)(DWORD stack, HookParam* hp);
+#else
+	void(*text_fun)(uint64_t stack, HookParam* hp, BYTE obsoleteAlwaysZero, uint64_t* data, uint64_t* split, DWORD* len);
+	bool(*hook_fun)(uint64_t stack, HookParam* hp);
+#endif
+	// void(*text_fun)(uintptr_t stack, HookParam* hp, BYTE obsoleteAlwaysZero, DWORD* data, DWORD* split, DWORD* len);
 	bool(*filter_fun)(void* data, DWORD* len, HookParam* hp, BYTE obsoleteAlwaysZero); // jichi 10/24/2014: Add filter function. Return false to skip the text
-	bool(*hook_fun)(DWORD stack, HookParam* hp); // jichi 10/24/2014: Add generic hook function, return false if stop execution.
+	// bool(*hook_fun)(uintptr_t stack, HookParam* hp); // jichi 10/24/2014: Add generic hook function, return false if stop execution.
 	int(*length_fun)(uintptr_t stack, uintptr_t data); // data after padding added
 
 	char name[HOOK_NAME_SIZE];

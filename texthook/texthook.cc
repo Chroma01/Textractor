@@ -170,7 +170,7 @@ void TextHook::Send(uintptr_t dwDataBase)
 		uintptr_t data = *(uintptr_t*)(dwDataBase + hp.offset); // default value
 
 		if (hp.text_fun) {
-			hp.text_fun(dwDataBase, &hp, 0, &static_cast<DWORD>(data), &static_cast<DWORD>(tp.ctx2), &static_cast<DWORD>(count));
+			hp.text_fun(dwDataBase, &hp, 0, &data, &tp.ctx2, &static_cast<DWORD>(count));
 		}
 		else {
 			if (hp.type & USING_SPLIT)

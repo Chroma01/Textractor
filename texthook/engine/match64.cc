@@ -974,7 +974,7 @@ namespace Engine
 			size_t textIndex; // argument index
 			short lengthIndex; // argument index
 			unsigned long hookType; // HookParam type
-			void(*text_fun)(DWORD stack, HookParam* hp, BYTE obsoleteAlwaysZero, DWORD* data, DWORD* split, DWORD* len); // HookParam::text_fun_t
+			void(*text_fun)(uintptr_t stack, HookParam* hp, BYTE obsoleteAlwaysZero, uintptr_t* data, uintptr_t* split, DWORD* len); // HookParam::text_fun_t
 		};
 
 		HookParam hp = {};
@@ -1199,7 +1199,7 @@ namespace Engine
 					hp.offset = pusha_rcx_off - 4; // rcx
 					hp.padding = 0x48;
 					hp.length_offset = 0;
-					hp.text_fun = [](DWORD rsp_base, HookParam* pHp, BYTE, DWORD* data, DWORD* split, DWORD* count)
+					hp.text_fun = [](uintptr_t rsp_base, HookParam* pHp, BYTE, uintptr_t* data, uintptr_t* split, DWORD* count)
 					{
 						uint64_t r8 = regof(r8, rsp_base);
 						uint64_t r10 = regof(r10, rsp_base);
@@ -1239,7 +1239,7 @@ namespace Engine
 
 					hp.address += 6;
 					hp.padding = 0x30;
-					hp.text_fun = [](DWORD rsp_base, HookParam* pHp, BYTE, DWORD* data, DWORD* split, DWORD* count)
+					hp.text_fun = [](uintptr_t rsp_base, HookParam* pHp, BYTE, uintptr_t* data, uintptr_t* split, DWORD* count)
 					{
 						uint64_t r8 = regof(r8, rsp_base);
 						uint64_t r10 = regof(r10, rsp_base);
@@ -1311,7 +1311,7 @@ namespace Engine
 					}
 					hp.offset = pusha_rdi_off - 4; // rdi
 					hp.length_offset = 0;
-					hp.text_fun = [](DWORD rsp_base, HookParam* pHp, BYTE, DWORD* data, DWORD* split, DWORD* count)
+					hp.text_fun = [](uintptr_t rsp_base, HookParam* pHp, BYTE, uintptr_t* data, uintptr_t* split, DWORD* count)
 					{
 						uint64_t r11 = regof(r11, rsp_base);
 						if (r11 == 0x7F) {

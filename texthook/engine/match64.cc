@@ -1714,12 +1714,126 @@ namespace Engine
 		return false;
 	}
 
+	bool InsertFuzzHook() {
+		// By Chenx221
+
+		bool flag = false;
+		// Tested:
+		// https://vndb.org/v94 君が望む永遠 ～Enhanced Edition R～(体験版)
+		// https://vndb.org/r128830 君が望む永遠 ～Enhanced Edition～ another episode collection+
+		// https://vndb.org/r124569 君が望む永遠 ～Enhanced Edition～
+		// https://vndb.org/r114285 マブラヴ オルタネイティヴ トータル・イクリプス 帝都燃ゆ
+		const BYTE bytes[] = {
+			0x48, 0x8B, 0xC8,             //mov rcx, rax
+			0x48, 0x83, 0x78, 0x18, 0x10, //cmp qword ptr ds:[rax+18], 10
+			0x72, 0x03,					  //jb kiminozet-win64vc14-release.7FF72482AD3A
+			0x48, 0x8B, 0x08,             //mov rcx, qword ptr ds:[rax]
+			0x48, 0x83, 0x78, 0x10, 0x05  //cmp qword ptr ds:[rax+10], 5 // <--
+		};
+
+		ULONG64 range = min(processStopAddress - processStartAddress, X64_MAX_REL_ADDR);
+		for (auto addr : Util::SearchMemory(bytes, sizeof(bytes), PAGE_EXECUTE, processStartAddress, processStartAddress + range)) {
+			HookParam hp = {};
+			hp.address = addr + 0xD;
+			hp.offset = pusha_rcx_off - 4;
+			hp.type = USING_STRING | USING_UTF8 | USING_SPLIT | NO_CONTEXT;
+			hp.split = pusha_r15_off - 4;
+			hp.filter_fun = [](void* str, DWORD* size, HookParam* hp, BYTE index) {
+				auto text = reinterpret_cast<char*>(str);
+				auto len =  static_cast<size_t>(*size);
+
+				StringCharReplacer(text, &len, "\\n", 2, '\n');
+				*size = static_cast<DWORD>(len);
+				return true;
+			};
+			ConsoleOutput("vnreng: INSERT Fuzz Hook");
+			NewHook(hp, "Fuzz");
+			flag = true;
+		}
+
+		// Tested:
+		// https://store.steampowered.com/app/1557480/Project_MIKHAIL_A_MuvLuv_War_Story/ Project MIKHAIL - A Muv-Luv War Story
+		const BYTE bytes2[] = {
+			0x48, 0x8D, 0x4D, 0x9F,	      //lea rcx, qword ptr ss:[rbp-61]
+			0x48, 0x83, 0x7D, 0xB7, 0x10, //cmp qword ptr ss:[rbp-49], 10
+			0x48, 0x0F, 0x43, 0x4D, 0x9F, //cmovae rcx, qword ptr ss:[rbp-61]
+			0x48, 0x89, 0x44, 0x24, 0x20  //mov qword ptr ss:[rsp+20], rcx // <--
+		};
+		for (auto addr : Util::SearchMemory(bytes2, sizeof(bytes2), PAGE_EXECUTE, processStartAddress, processStopAddress)) {
+			HookParam hp = {};
+			hp.address = addr + 0xE;
+			hp.offset = pusha_rcx_off - 4;
+			hp.type = USING_STRING | USING_UTF8;
+			hp.filter_fun = [](void* str, DWORD* size, HookParam* hp, BYTE index) {
+				auto text = reinterpret_cast<char*>(str);
+				auto len =  static_cast<size_t>(*size);
+
+				StringCharReplacer(text, &len, "\\n", 2, '\n');
+				*size = static_cast<DWORD>(len);
+				return true;
+			};
+			ConsoleOutput("vnreng: INSERT Fuzz Hook");
+			NewHook(hp, "Fuzz");
+			flag = true;
+		}
+
+		// Tested:
+		// https://vndb.org/r71433 マブラヴ アンリミテッド ザ・デイアフター episode:00 REMASTERED
+		// https://vndb.org/r77581 マブラヴ アンリミテッド ザ・デイアフター episode:01 REMASTERED
+		// https://vndb.org/r77582 マブラヴ アンリミテッド ザ・デイアフター episode:02 REMASTERED
+		// https://vndb.org/r77583 マブラヴ アンリミテッド ザ・デイアフター episode:03 REMASTERED
+		const BYTE bytes3[] = {
+			0x48, 0x8D, 0x95, 0xF0, 0x00, 0x00, 0x00, //lea rdx, qword ptr ss:[rbp+F0]
+			0x48, 0x8D, 0x8D, 0x30, 0x01, 0x00, 0x00, //lea rcx, qword ptr ss:[rbp+130]
+			0xE8, XX4								  //call tda00-win64vc14-release.7FF72B36DC90 //<--
+		};
+		for (auto addr : Util::SearchMemory(bytes3, sizeof(bytes3), PAGE_EXECUTE, processStartAddress, processStopAddress)) {
+			HookParam hp = {};
+			hp.address = addr + 0xE;
+			hp.offset = pusha_rdx_off - 4;
+			hp.type = USING_STRING | USING_UTF8 | USING_SPLIT;
+			hp.split = pusha_rdi_off - 4;
+			hp.text_fun = [](uint64_t rsp_base, HookParam* pHp, BYTE, uint64_t* data, uintptr_t* split, DWORD* count) {
+				uint64_t rdx = regof(rdx, rsp_base);
+				*split = regof(rdi, rsp_base);
+				uint64_t length = *(uint64_t*)(rdx + 0x10);
+				if (length >= 0x10) {
+					*data = *(uint64_t*)rdx;
+				} else {
+					*data = rdx;
+				}
+				*count = static_cast<DWORD>(length);
+			};
+			hp.filter_fun = [](void* str, DWORD* size, HookParam* hp, BYTE index) {
+				auto text = reinterpret_cast<char*>(str);
+				auto len =  static_cast<size_t>(*size);
+
+				StringCharReplacer(text, &len, "\\n", 2, '\n');
+				StringFilter(text, &len, "\\w", 2);
+				StringFilter(text, &len, "\\p", 2);
+				*size = static_cast<DWORD>(len);
+				return true;
+			};
+			ConsoleOutput("Textractor: INSERT Fuzz Hook");
+			NewHook(hp, "Fuzz");
+			flag = true;
+		}
+
+		if(flag) return true;
+		ConsoleOutput("Textractor:Fuzz: pattern not found");
+		return false;
+	}
+
 	bool UnsafeDetermineEngineType()
 	{
 		if (Util::CheckFile(L"PPSSPP*.exe") && FindPPSSPP()) return true;
 
 		if (Util::CheckFile(L"*.pck")) {
 			return InsertGodotHook_X64();
+		}
+
+		if (Util::CheckFile(L"erc_nospfx.dll") || Util::CheckFile(L"erc.dll")) {
+			return InsertFuzzHook();
 		}
 
 		if (checkv8orcef())return true;

@@ -16510,6 +16510,8 @@ bool Pal3Filter(LPVOID data, DWORD *size, HookParam *, BYTE)
   StringFilterBetween(text, len, "<d", 2, ">", 1); //特殊文本?
   StringFilter(text, len, "</d>", 4);
   StringFilterBetween(text, len, "<r>", 3, "</r>", 4); //ruby
+  StringFilterBetween(text, len, "<r", 2, ">", 1); //ruby v2
+  StringFilter(text, len, "</r>", 4);
 
   StringFilterBetween(text, len, "<c", 2, ">", 1); //色
   StringFilter(text, len, "</c>", 4);

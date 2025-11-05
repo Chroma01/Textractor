@@ -8174,6 +8174,10 @@ bool InsertYuris8Hook()
   hp.text_fun = [](DWORD esp_base, HookParam*, BYTE, DWORD*, DWORD*, DWORD* len)
   {
 	DWORD textLen = regof(eax,esp_base);
+	if(regof(edi,esp_base) == 0x90){ // hatsujo.exe
+	  *len = textLen;
+	  return;
+	}
 	if ( textLen > 2)
 	  return;
 	*len = (regof(edi,esp_base) >= 0xFA && regof(edi,esp_base) <= 0xFE || regof(edi,esp_base) >= 0x1A0 && regof(edi,esp_base) <= 0x1C2) ? textLen : 0;

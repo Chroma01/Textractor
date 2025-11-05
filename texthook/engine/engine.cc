@@ -8171,18 +8171,20 @@ bool InsertYuris8Hook()
   hp.address = addr;
   hp.offset = pusha_edx_off -4;
   hp.index = 0;
-  hp.text_fun = [](DWORD esp_base, HookParam*, BYTE, DWORD*, DWORD*, DWORD* len)
+  hp.text_fun = [](DWORD esp_base, HookParam*, BYTE, DWORD*, DWORD *split, DWORD* len)
   {
 	DWORD textLen = regof(eax,esp_base);
+	*split = 0;
 	if(regof(edi,esp_base) == 0x90){ // hatsujo.exe
 	  *len = textLen;
+	  *split = 1;
 	  return;
 	}
 	if ( textLen > 2)
 	  return;
 	*len = (regof(edi,esp_base) >= 0xFA && regof(edi,esp_base) <= 0xFE || regof(edi,esp_base) >= 0x1A0 && regof(edi,esp_base) <= 0x1C2) ? textLen : 0;
   };
-  hp.type = USING_STRING;
+  hp.type = USING_SPLIT|USING_STRING;
   ConsoleOutput("vnreng: INSERT YU-RIS8");
   NewHook(hp, "YU-RIS8");
   return true;

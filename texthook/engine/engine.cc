@@ -27871,6 +27871,7 @@ bool InsertTrianglePixHook()
     * 魔法閃士フェアリーバレット https://vndb.org/v49570
     * 幻聖剣姫セイクリッドアーク https://vndb.org/v52538
     * 魔法戦士エクストラバースト～天使断罪～ (Trial) https://vndb.org/v55031
+    * 魔法閃士フェアリーブレイク (Trial) https://vndb.org/v59045
     *
     * 00CC4084 | 50                 | push eax                           | <--
     * 00CC4085 | E8 6694DCFF        | call extraignition.A8D4F0          |
@@ -27883,7 +27884,7 @@ bool InsertTrianglePixHook()
   const BYTE bytes2[] = {
     0x50,
     0xE8, XX4,
-    0x8B, 0x87, XX4,
+    0x8B, XX, XX4,
     0x8D, 0x8D, XX4,
     0x83, 0x7B, 0x44, XX,
     0xFF, 0x73, 0x40

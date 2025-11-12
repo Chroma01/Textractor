@@ -6761,11 +6761,25 @@ bool InsertAtelierKaguya2Hook()
     0x78, 0xA1                 // js Start.exe+48947
   };
 
+  // https://vndb.org/r144806
+  const BYTE bytes2[] = {
+    0xFF, 0x70, XX,       // push dword ptr ds:[eax-0x08] << hook here
+    0x50,                   // push eax
+    0xE8, XX4,              // call 0x00521800
+    0x8B, 0xC8,             // mov ecx,eax
+    0x83, 0xC4, XX,         // add esp,8
+    0x85, 0xC9,             // test ecx,ecx
+    0x78                    // js 0x00456ABF
+  };
+
   ULONG range = min(processStopAddress - processStartAddress, MAX_REL_ADDR);
   ULONG addr = MemDbg::findBytes(bytes, sizeof(bytes), processStartAddress, processStartAddress + range);
   if (!addr) {
-    ConsoleOutput("vnreng:Atelier KAGUYA2: pattern not found");
-    return false;
+    addr = MemDbg::findBytes(bytes2, sizeof(bytes2), processStartAddress, processStartAddress + range);
+    if (!addr) {
+      ConsoleOutput("vnreng:Atelier KAGUYA2: pattern not found");
+      return false;
+    }
   }
 
   HookParam hp = {};

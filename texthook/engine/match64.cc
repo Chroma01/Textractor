@@ -1929,6 +1929,38 @@ namespace Engine
 		return false;
 	}
 
+	bool InsertMagesSPHook() {
+		// By Chenx221
+
+		// Tested:
+		// https://vndb.org/v49686 岩倉アリア
+
+		const BYTE bytes[] = {
+			0x44, 0x03, 0xC8, 0x48, 0x8B, 0x0D
+		};
+
+		ULONG64 range = min(processStopAddress - processStartAddress, X64_MAX_REL_ADDR);
+		for (auto addr : Util::SearchMemory(bytes, sizeof(bytes), PAGE_EXECUTE, processStartAddress, processStartAddress + range)) {
+			HookParam hp = {};
+			hp.address = addr;
+			hp.offset = pusha_rax_off - 4;
+			hp.type = USING_UNICODE | HEX_DUMP | USING_SPLIT;
+			hp.length_offset = 1;
+			hp.split = pusha_rbp_off - 4;
+			hp.text_fun = [](uint64_t rsp_base, HookParam* pHp, BYTE, uint64_t* data, uintptr_t* split, DWORD* count) {
+				*split = rsp_base >> (regof(rbp, rsp_base) & 0x1ULL);
+				*data = regof(rax, rsp_base);
+				*count = 2;
+			};
+			ConsoleOutput("vnreng: INSERT MEGAS_SP(IWAKURA_ARIA) Hook");
+			NewHook(hp, "MEGAS_SP");
+			return true;
+		}
+
+		ConsoleOutput("Textractor:MEGAS_SP(IWAKURA_ARIA): pattern not found");
+		return false;
+	}
+
 	bool UnsafeDetermineEngineType()
 	{
 		if (Util::CheckFile(L"PPSSPP*.exe") && FindPPSSPP()) return true;
@@ -1992,6 +2024,14 @@ namespace Engine
 		}
 
 		for (const wchar_t* monoName : { L"mono.dll", L"mono-2.0-bdwgc.dll" }) if (HMODULE module = GetModuleHandleW(monoName)) if (InsertMonoHooks(module)) return true;
+
+		if (Util::CheckFile(L"Data/system.mpk")) {
+			ConsoleOutput("Textractor: MAGES engine detected. To correctly obtain the text, please prepare the SavedReplacements.txt replacement table and enable the Replacer extension.");
+			if (Util::CheckFile(L"IWAKURA_ARIA.exe")) {
+				InsertMagesSPHook();
+			}
+			return true;
+		}
 
 		if (Util::CheckFile(L"*.xp3") || Util::SearchResourceString(L"TVP(KIRIKIRI) Z ")) { // TVP(KIRIKIRI) Z CORE
 			if (InsertKiriKiriZHook())

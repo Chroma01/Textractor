@@ -21614,10 +21614,13 @@ bool Anim3Filter(LPVOID data, DWORD *size, HookParam *, BYTE)
   StringFilterBetween(text, len, "\x81\x40", 2, "@m", 2); // @r(2,はと)
   StringFilterBetween(text, len, "\x81\x40", 2, "@n", 2); // @r(2,はと)
   StringCharReplacer(text, len, "@b", 2, ' ');
-  StringCharReplacer(text, len, "\x81\x42", 2, '.');
-  StringCharReplacer(text, len, "\x81\x48", 2, '?');
-  StringCharReplacer(text, len, "\x81\x49", 2, '!');
-
+  // 这种替换看起来没有必要
+  // StringCharReplacer(text, len, "\x81\x42", 2, '.');
+  // StringCharReplacer(text, len, "\x81\x48", 2, '?');
+  // StringCharReplacer(text, len, "\x81\x49", 2, '!');
+  std::regex pattern(R"(@[wh]\d*)");
+	RegexReplacer(text, len, pattern, "");
+  StringFilter(text, len, "@r", 2);
   return true;
 }
 
@@ -21648,24 +21651,26 @@ bool InsertAnim3Hook()
     https://vndb.org/v52822
     https://vndb.org/v55359
     https://vndb.org/v57286 (Trial)
+    https://vndb.org/v59411 (Trial)
   */
   const BYTE bytes2[] = {
-      0xCC,                                   // int3
+      // 0xCC,                                   // int3
       0x55,                                   // push ebp      << hook here
       0x8B, 0xEC,                             // mov ebp,esp
-      0x6A, 0xFF,                             // push FFFFFFFF
+      0x6A, XX,                               // push FFFFFFFF
       0x68, XX4,                              // push mamahaha2.CA311B
-      0x64, 0xA1, 0x00, 0x00, 0x00, 0x00,     // mov eax,dword ptr fs:[0]
+      0x64, 0xA1, XX4,                        // mov eax,dword ptr fs:[0]
       0x50,                                   // push eax
       0x81, 0xEC, XX4,                        // sub esp,D20
       0xA1, XX4,                              // mov eax,dword ptr ds:[CBC010]
       0x33, 0xC5,                             // xor eax,ebp
-      0x89, 0x45, 0xF0,                       // mov dword ptr ss:[ebp-10],eax
+      0x89, 0x45, XX,                         // mov dword ptr ss:[ebp-10],eax
       0x56,                                   // push esi
       0x50,                                   // push eax
-      0x8D, 0x45, 0xF4,                       // lea eax,dword ptr ss:[ebp-C]
-      0x64, 0xA3, 0x00, 0x00, 0x00, 0x00,     // mov dword ptr fs:[0],eax
-      0x89, 0x8D, 0x58, 0xF3, 0xFF, 0xFF      // mov dword ptr ss:[ebp-CA8],ecx
+      0x8D, 0x45, XX,                         // lea eax,dword ptr ss:[ebp-C]
+      0x64, 0xA3, XX4,                        // mov dword ptr fs:[0],eax
+      0x89, 0x8D, XX4,                        // mov dword ptr ss:[ebp-CA8],ecx
+      0xC7, 0x85
   };
   ULONG range = min(processStopAddress - processStartAddress, MAX_REL_ADDR);
   ULONG addr = MemDbg::findBytes(bytes, sizeof(bytes), processStartAddress, processStartAddress + range);
@@ -21677,11 +21682,13 @@ bool InsertAnim3Hook()
     }
     // hp.offset = pusha_eax_off - 4;
     hp.offset = 4;
+    hp.address = addr;
   }else{
     hp.offset = pusha_edx_off - 4;
+    hp.address = addr + 1;
   }
 
-  hp.address = addr + 1;
+
   hp.type = USING_STRING;
   hp.filter_fun = Anim3Filter;
   ConsoleOutput("vnreng: INSERT Anim3");

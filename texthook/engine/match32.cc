@@ -150,6 +150,10 @@ bool DetermineEngineByFile1()
 	  InsertHorkEyeHook();
 		return true;
 	}
+  if (Util::SearchResourceString(L"VALKYRIA")) {
+    InsertVALKYRIAHook();
+    return true;
+  }
   // Artikash 7/14/2018: AIRNovel - sample game https://vndb.org/v18814
   if (Util::CheckFile(L"*.swf"))
   {

@@ -21697,6 +21697,138 @@ bool InsertAnim3Hook()
   return true;
 }
 
+bool InsertVALKYRIAHook()
+{
+  bool flag = false;
+  // by Chenx221
+  /*
+    Sample games:
+    https://vndb.org/v55358
+    https://vndb.org/v59025
+  */
+
+// 00685500 | 6A FF              | push FFFFFFFF                       | hook here
+// 00685502 | 68 83AF6E00        | push val-0073(dl).6EAF83            |
+// 00685507 | 64:A1 00000000     | mov eax,dword ptr fs:[0]            |
+// 0068550D | 50                 | push eax                            |
+// 0068550E | 81EC 98000000      | sub esp,98                          |
+// 00685514 | A1 00FF7100        | mov eax,dword ptr ds:[71FF00]       |
+// 00685519 | 33C4               | xor eax,esp                         |
+// 0068551B | 898424 94000000    | mov dword ptr ss:[esp+94],eax       |
+// 00685522 | 53                 | push ebx                            |
+// 00685523 | 55                 | push ebp                            |
+// 00685524 | 56                 | push esi                            |
+// 00685525 | 57                 | push edi                            |
+// 00685526 | A1 00FF7100        | mov eax,dword ptr ds:[71FF00]       |
+// 0068552B | 33C4               | xor eax,esp                         |
+// 0068552D | 50                 | push eax                            |
+// 0068552E | 8D8424 AC000000    | lea eax,dword ptr ss:[esp+AC]       |
+// 00685535 | 64:A3 00000000     | mov dword ptr fs:[0],eax            |
+// 0068553B | 8BF1               | mov esi,ecx                         |
+  const BYTE bytes[] = {
+      0x6a, XX,
+      0x68, XX4,
+      0x64, 0xa1, XX4,
+      0x50,
+      0x81, 0xec, XX4,
+      0xa1, XX4,
+      0x33, 0xc4,
+      0x89, 0x84, 0x24, XX4,
+      0x53,
+      0x55,
+      0x56,
+      0x57,
+      0xa1, XX4,
+      0x33, 0xc4,
+      0x50,
+      0x8d, 0x84, 0x24, XX4,
+      0x64, 0xa3, XX4,
+      0x8b, 0xf1
+  };
+  ULONG range = min(processStopAddress - processStartAddress, MAX_REL_ADDR);
+  ULONG addr = MemDbg::findBytes(bytes, sizeof(bytes), processStartAddress, processStartAddress + range);
+  if (!addr) {
+    ConsoleOutput("Textractor:VALKYRIA: pattern not found");
+  }else{
+    HookParam hp = {};
+    flag = true;
+    hp.offset = 0x14;
+    hp.length_offset = 1;
+    hp.address = addr;
+    hp.index = 0;
+    hp.type = DATA_INDIRECT;
+    hp.filter_fun = [](LPVOID data, DWORD* size, HookParam*, BYTE)
+    {
+      auto text = reinterpret_cast<LPSTR>(data);
+      auto len = reinterpret_cast<size_t*>(size);
+      CharsFilter(text,len,"\\");
+      return true;
+    };
+    ConsoleOutput("Textractor: INSERT VALKYRIA");
+    NewHook(hp, "VALKYRIA");
+  }
+
+// 00672D8E | 8B15 40187200      | mov edx,dword ptr ds:[721840]       | hook here
+// 00672D94 | A1 94197200        | mov eax,dword ptr ds:[721994]       |
+// 00672D99 | 4A                 | dec edx                             |
+// 00672D9A | 8915 40187200      | mov dword ptr ds:[721840],edx       |
+// 00672DA0 | 8B08               | mov ecx,dword ptr ds:[eax]          |
+// 00672DA2 | A1 98197200        | mov eax,dword ptr ds:[721998]       |
+// 00672DA7 | 3B08               | cmp ecx,dword ptr ds:[eax]          |
+// 00672DA9 | 75 1D              | jne val-0073(dl).672DC8             |
+// 00672DAB | 85D2               | test edx,edx                        |
+// 00672DAD | 75 19              | jne val-0073(dl).672DC8             |
+// 00672DAF | 56                 | push esi                            |
+// 00672DB0 | 68 001C7200        | push val-0073(dl).721C00            |
+// 00672DB5 | 68 34F76E00        | push val-0073(dl).6EF734            |
+// 00672DBA | 68 001C7200        | push val-0073(dl).721C00            |
+// 00672DBF | FF15 B0C26E00      | call dword ptr ds:[<wsprintfA>]     |
+// 00672DC5 | 83C4 10            | add esp,10                          |
+// 00672DC8 | 8D46 01            | lea eax,dword ptr ds:[esi+1]        |
+  const BYTE bytes2[] = {
+      0x8b, 0x15, XX4,
+      0xa1, XX4,
+      0x4a,
+      0x89, 0x15, XX4,
+      0x8b, 0x08,
+      0xa1, XX4,
+      0x3b, 0x08,
+      0x75, XX,
+      0x85, 0xd2,
+      0x75, XX,
+      0x56,
+      0x68, XX4,
+      0x68, XX4,
+      0x68, XX4,
+      0xff, 0x15, XX4,
+      0x83, 0xc4, XX,
+      0x8d, 0x46, XX
+  };
+  addr = MemDbg::findBytes(bytes2, sizeof(bytes2), processStartAddress, processStartAddress + range);
+  if (!addr) {
+    ConsoleOutput("Textractor:VALKYRIA2: pattern not found");
+  }else{
+    HookParam hp = {};
+    flag = true;
+    hp.offset = pusha_esi_off -4;
+    hp.address = addr;
+    hp.type = USING_STRING | NO_CONTEXT;
+    hp.filter_fun = [](LPVOID data, DWORD* size, HookParam*, BYTE)
+    {
+      auto text = reinterpret_cast<LPSTR>(data);
+      auto len = reinterpret_cast<size_t*>(size);
+      std::regex pattern(R"(\\r|\\u\d+)");
+	  RegexReplacer(text, len, pattern, "");
+      return true;
+    };
+    ConsoleOutput("Textractor: INSERT VALKYRIA2");
+    NewHook(hp, "VALKYRIA2");
+  }
+  if(flag)
+    ConsoleOutput("Textractor: It is recommended to increase the in-game text speed for better results.");
+  return flag;
+}
+
 bool InsertMonoHooks()
 {
   HMODULE h = ::GetModuleHandleA("mono.dll");

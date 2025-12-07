@@ -26561,6 +26561,67 @@ bool InsertNamcoPS2Hook()
 }
 #endif // 0
 
+bool AstronautsFilter(LPVOID data, DWORD *size, HookParam *, BYTE)
+{
+  auto text = reinterpret_cast<LPWSTR>(data);
+  auto len = reinterpret_cast<size_t *>(size);
+
+  if (!*len)
+    return false;
+
+  if (cpp_wcsnstr(text, L"≪", *len/sizeof(wchar_t))) {
+    WideCharFilter(text, len, L'≪');
+    WideStringFilterBetween(text, len, L"／", 1, L"≫", 1);
+  }
+
+  return true;
+}
+bool InsertAstronautsHook() {
+  //GxEngine V3和你有什么关系?
+	//by Chenx221
+	/*
+	* Sample games:
+	* https://vndb.org/v32802
+	*/
+	const BYTE bytes[] = {
+		0x8B, 0XCE,           // mov ecx, esi
+    XX2,                  // mov edx,dword ptr ds:[esi]
+    0x50,                 // push eax
+    0x8D, 0x44, 0x24, XX, // lea eax,dword ptr ss:[esp+1C]
+    0x50,                 // push eax
+    0xFF, 0x92, XX4,      // call dword ptr ds:[edx+214]
+    0x8D, 0xBE            // lea edi,dword ptr ds:[esi+1A8] <--
+	};
+	// 51 56 8D 44 24 ?? B9 ?? ?? ?? ?? 50 E8 ?? ?? ?? ?? 8D B7 这个是角色名，但感觉没必要:)
+  ULONG range = min(processStopAddress - processStartAddress, MAX_REL_ADDR);
+	ULONG addr = MemDbg::findBytes(bytes, sizeof(bytes), processStartAddress, processStartAddress + range);
+	if (!addr) {
+		ConsoleOutput("Textractor:Astronauts: pattern not found");
+		return false;
+	}
+
+	HookParam hp = {};
+	hp.address = addr + 0x10;
+	hp.offset = pusha_eax_off -4;
+	hp.index = 0;
+	hp.text_fun = [](DWORD esp_base, HookParam*, BYTE, DWORD *data, DWORD*, DWORD *len)
+	{
+    DWORD eax = regof(eax, esp_base);
+    *len = *(DWORD*)(eax + 0x10) * 2;
+    if(*len == 0) return;
+    if(*len / 2 >= 8){
+      *data = *(DWORD*)(eax);
+    }
+	};
+	hp.filter_fun = AstronautsFilter;
+	hp.type = USING_UNICODE | USING_STRING;
+	ConsoleOutput("Textractor: INSERT Astronauts");
+	NewHook(hp, "Astronauts");
+
+	return true;
+}
+
+
 bool InsertDebonosuWorksHook() {
 	//by Blu3train
 	/*

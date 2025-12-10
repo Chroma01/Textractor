@@ -17052,7 +17052,7 @@ bool NeXAS2Filter(LPVOID data, DWORD *size, HookParam *, BYTE)
   static std::string prevText;
 
   StringCharReplacer(text, len, "@n", 2, ' ');
-  std::regex pattern(R"(@v[a-zA-Z_0-9]+|@[wmsf][0-9]+|@[pke])");
+  std::regex pattern(R"(@v[a-zA-Z_0-9]+|@[wmsf][0-9]+|@[pkeg])");
 	RegexReplacer(text, len, pattern, "");
 	std::regex pattern2(R"(@r([^@]+)@[^@]+@)");
 	RegexReplacer(text, len, pattern2, "$1");

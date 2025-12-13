@@ -1,3 +1,14 @@
+# --------- Dependencies ---------
+include(FetchContent)
+
+FetchContent_Declare(
+        json
+        GIT_REPOSITORY https://github.com/nlohmann/json.git
+        GIT_TAG v3.12.0
+        GIT_SHALLOW TRUE
+)
+
+FetchContent_MakeAvailable(json)
 
 # --------- Libraries ---------
 add_library(Aliyun_Translate MODULE aliyuntranslate.cpp translatewrapperaliyun.cpp network.cpp extensionimpl.cpp)
@@ -13,6 +24,7 @@ add_library(Extra_Newlines MODULE extranewlines.cpp extensionimpl.cpp)
 add_library(Extra_Window MODULE extrawindow.cpp extensionimpl.cpp)
 add_library(Extra_Window_Test MODULE extrawindowtest.cpp extensionimpl.cpp)
 add_library(Google_Translate MODULE googletranslate.cpp translatewrapper.cpp network.cpp extensionimpl.cpp)
+add_library(Google_Translate2 MODULE googletranslate2.cpp translatewrapper.cpp network.cpp extensionimpl.cpp)
 add_library(Lua MODULE lua.cpp extensionimpl.cpp)
 add_library(Regex_Filter MODULE regexfilter.cpp extensionimpl.cpp)
 add_library(Regex_Replacer MODULE regexreplacer.cpp extensionimpl.cpp)
@@ -46,6 +58,7 @@ set_target_properties(Extra_Newlines PROPERTIES OUTPUT_NAME "Extra Newlines")
 set_target_properties(Extra_Window PROPERTIES OUTPUT_NAME "Extra Window")
 set_target_properties(Extra_Window_Test PROPERTIES OUTPUT_NAME "Extra Window Test")
 set_target_properties(Google_Translate PROPERTIES OUTPUT_NAME "Google Translate")
+set_target_properties(Google_Translate2 PROPERTIES OUTPUT_NAME "Google Translate2")
 set_target_properties(Regex_Filter PROPERTIES OUTPUT_NAME "Regex Filter")
 set_target_properties(Regex_Replacer PROPERTIES OUTPUT_NAME "Regex Replacer")
 set_target_properties(Regex_Replacer_Translated_Text PROPERTIES OUTPUT_NAME "Regex Replacer Translated Text")
@@ -76,6 +89,7 @@ target_precompile_headers(Extra_Newlines REUSE_FROM pch)
 target_precompile_headers(Extra_Window REUSE_FROM pch)
 target_precompile_headers(Extra_Window_Test REUSE_FROM pch)
 target_precompile_headers(Google_Translate REUSE_FROM pch)
+target_precompile_headers(Google_Translate2 REUSE_FROM pch)
 target_precompile_headers(Lua REUSE_FROM pch)
 target_precompile_headers(Regex_Filter REUSE_FROM pch)
 target_precompile_headers(Regex_Replacer REUSE_FROM pch)
@@ -107,6 +121,7 @@ target_link_libraries(DevTools_Systran_Translate shell32 winhttp Qt5::Widgets Qt
 target_link_libraries(Extra_Window Qt5::Widgets)
 target_link_libraries(Extra_Window_Test Qt5::Widgets)
 target_link_libraries(Google_Translate winhttp Qt5::Widgets)
+target_link_libraries(Google_Translate2 winhttp Qt5::Widgets nlohmann_json::nlohmann_json)
 target_link_libraries(Lua lua53 Qt5::Widgets)
 target_link_libraries(Regex_Filter Qt5::Widgets)
 target_link_libraries(Styler Qt5::Widgets)

@@ -27339,6 +27339,8 @@ bool DxLibFilter(LPVOID data, DWORD *size, HookParam *, BYTE)
   StringCharReplacer(text, len, "%N", 2, ' ');
   StringFilter(text, len, "%K", 2);
   StringFilter(text, len, "%P", 2);
+  std::regex pattern(R"(\{([^}]+)\}\[[^\]]+\])"); //remove ruby {苛}[さいな]
+  RegexReplacer(text, len, pattern, "$1");
 
   return true;
 }
@@ -27362,21 +27364,45 @@ bool InsertDxLibHook()
 
   ULONG range = min(processStopAddress - processStartAddress, MAX_REL_ADDR);
   ULONG addr = MemDbg::findBytes(bytes, sizeof(bytes), processStartAddress, processStartAddress + range);
-  if (!addr) {
-    ConsoleOutput("vnreng:DxLib: pattern not found");
-    return false;
+  if (addr) {
+    HookParam hp = {};
+    hp.address = addr;
+    //hp.offset = pusha_edx_off -4;
+    hp.offset = pusha_esi_off -4;
+    hp.index = 0;
+    hp.type = USING_STRING;
+    hp.filter_fun = DxLibFilter;
+    ConsoleOutput("vnreng: INSERT DxLib");
+    NewHook(hp, "DxLib");
+    return true;
   }
+  ConsoleOutput("vnreng:DxLib: pattern not found");
 
-  HookParam hp = {};
-  hp.address = addr;
-  //hp.offset = pusha_edx_off -4;
-  hp.offset = pusha_esi_off -4;
-  hp.index = 0;
-  hp.type = USING_STRING;
-  hp.filter_fun = DxLibFilter;
-  ConsoleOutput("vnreng: INSERT DxLib");
-  NewHook(hp, "DxLib");
-  return true;
+  const BYTE bytes2[] = {
+    0x51, // <--
+    0x53,
+    0x55,
+    0x56,
+    0x8B, 0xDA,
+    0x33, 0xC0,
+    0x8B, 0xF1,
+    0x57,
+    0x85, 0xDB
+  };
+  addr = MemDbg::findBytes(bytes2, sizeof(bytes2), processStartAddress, processStartAddress + range);
+  if (addr) {
+    HookParam hp = {};
+    hp.address = addr;
+    hp.offset = pusha_edx_off -4;
+    hp.index = 0;
+    hp.type = USING_STRING;
+    hp.filter_fun = DxLibFilter;
+    ConsoleOutput("vnreng: INSERT DxLib2");
+    NewHook(hp, "DxLib2");
+    return true;
+  }
+  ConsoleOutput("vnreng:DxLib2: pattern not found");
+  return false;
 }
 
 bool CodeXFilter(LPVOID data, DWORD *size, HookParam *, BYTE)

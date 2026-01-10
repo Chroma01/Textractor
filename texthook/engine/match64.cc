@@ -2091,6 +2091,54 @@ void MonoCallBack(uintptr_t assembly, void *userData) {
 		return false;
 	}
 
+	bool InsertVisionairePlayerHook() {
+		// Tested:
+		// Adventures Of Willy D
+		const BYTE bytes[] = {
+			0x41, 0xB9, XX4, 0x4C, 0x8D, 0x85, XX4, 0xBA, XX4, 0x49, 0x8D, 0x4C, 0x24
+		};
+
+		ULONG64 range = min(processStopAddress - processStartAddress, X64_MAX_REL_ADDR);
+		for (auto addr : Util::SearchMemory(bytes, sizeof(bytes), PAGE_EXECUTE, processStartAddress, processStartAddress + range)) {
+			HookParam hp = {};
+			hp.address = addr + 0xD;
+			hp.offset = pusha_r8_off - 4;
+			hp.type = USING_UNICODE | USING_STRING;
+			hp.text_fun = [](uint64_t rsp_base, HookParam* pHp, BYTE, uint64_t* data, uintptr_t* split, DWORD* count) {
+				uint64_t r8 = regof(r8, rsp_base);
+				uint64_t length = *(uint64_t*)(r8 + 0x10);
+				uint64_t capacity = *(uint64_t*)(r8 + 0x18);
+				if (capacity >= 8) {
+					*data = *(uint64_t*)r8;
+				} else {
+					*data = r8;
+				}
+				*count = static_cast<DWORD>(length*2);
+			};
+			hp.filter_fun = [](LPVOID data, DWORD* size, HookParam*, BYTE)
+			{
+				auto text = reinterpret_cast<LPWSTR>(data);
+				auto len =  static_cast<size_t>(*size);
+
+				if (len == 0)
+					return false;
+				WideStringCharReplacer(text,&len,L"<br/>",5,L'\n');
+				WideStringFilter(text, &len, L"<p>", 3);
+
+				std::wregex pattern(LR"(<[^>]+>)");
+				RegexReplacerW(text, &len, pattern, L"");
+				*size = static_cast<DWORD>(len);
+				return true;
+			};
+			ConsoleOutput("vnreng: INSERT Visionaire Player Hook");
+			NewHook(hp, "VisionairePlayer");
+			return true;
+		}
+
+		ConsoleOutput("Textractor:Visionaire Player: pattern not found");
+		return false;
+	}
+
 	bool UnsafeDetermineEngineType()
 	{
 		if (Util::CheckFile(L"PPSSPP*.exe") && FindPPSSPP()) return true;
@@ -2128,6 +2176,11 @@ void MonoCallBack(uintptr_t assembly, void *userData) {
 			InsertArtemisExHook();
 			return true;
 		}
+
+	    if (Util::CheckFile(L"*.vis") && Util::CheckFile(L"config.ini")) {
+	        InsertVisionairePlayerHook();
+	    	return true;
+	    }
 
 		if (Util::CheckFile(L"bgi.*") || Util::CheckFile(L"sysgrp.arc")) {
 			InsertBGI64Hook();

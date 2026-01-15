@@ -2139,6 +2139,115 @@ void MonoCallBack(uintptr_t assembly, void *userData) {
 		return false;
 	}
 
+	bool InsertWillPlus64Hook() {
+		// By Chenx221
+
+		bool flag = false, gFlag = false;
+		// Tested:
+		// https://vndb.org/v61221 OfficeLove -クールな先輩彼女と秘密のイキ抜き- TRIAL EDITION
+
+		// WillPlus6Hook 64bit Port
+		const BYTE bytes[] = {
+			0x48, 0x8B, 0xC4,			// mov rax,rsp // hook here
+			0x55,						// push rbp
+			0x53,						// push rbx
+			0x56,						// push rsi
+			0x57,						// push rdi
+			0x41, 0x54,					// push r12
+			0x41, 0x55,					// push r13
+			0x41, 0x56,					// push r14
+			0x41, 0x57,					// push r15
+			0x48, 0x8D, 0x6C, 0x24, XX,	// lea rbp,qword ptr ss:[rsp-68]
+			0x48, 0x81, 0xEC, XX4,		// sub rsp,168
+			0x0F, 0x29, 0x70, XX,		// movaps xmmword ptr ds:[rax-58],xmm6
+			0x0F, 0x29, 0x78, XX,		// movaps xmmword ptr ds:[rax-68],xmm7
+			0x44, 0x0F, 0x29, 0x40, XX,	// movaps xmmword ptr ds:[rax-78],xmm8
+			0x48, 0x8B, 0x05, XX4,		// mov rax,qword ptr ds:[140468500]
+			0x48, 0x33, 0xC4,			// xor rax,rsp
+			0x48, 0x89, 0x45, XX,		// mov qword ptr ss:[rbp+28],rax
+			0x4D, 0x8B, 0xE1			// mov r12,r9
+		};
+
+		ULONG64 range = min(processStopAddress - processStartAddress, X64_MAX_REL_ADDR);
+		for (auto addr : Util::SearchMemory(bytes, sizeof(bytes), PAGE_EXECUTE, processStartAddress, processStartAddress + range)) {
+			HookParam hp = {};
+			hp.address = addr;
+			hp.offset = pusha_rcx_off - 4;
+			hp.type = USING_STRING | USING_UNICODE | NO_CONTEXT;
+			hp.filter_fun = [](void* str, DWORD* size, HookParam* hp, BYTE index) {
+				auto text = reinterpret_cast<LPWSTR>(str);
+				auto len = reinterpret_cast<size_t *>(size);
+				if (*text == L'/' || *text == L'|')
+					return false;
+				WideStringCharReplacer(text, len, L" \\n", 3, L' ');
+				WideStringCharReplacer(text, len, L"\\n", 2, L' ');
+				WideStringCharReplacer(text, len, L"\\d", 2, L'\"');
+				WideStringFilter(text, len, L"%LF", 3);
+				WideStringFilter(text, len, L"%LC", 3);
+				WideStringFilter(text, len, L"%K", 2);
+				WideStringFilter(text, len, L"%P", 2);
+				WideStringFilter(text, len, L"%XS", 5);
+				WideStringFilter(text, len, L"%XE", 3);
+				return true;
+			};
+			hp.text_fun = [](uint64_t rsp_base, HookParam* pHp, BYTE, uint64_t* data, uintptr_t* split, DWORD* count) {
+				uint64_t rcx = regof(rcx, rsp_base);
+				uint64_t length = *(uint64_t*)(rcx + 0x10);
+				uint64_t capacity = *(uint64_t*)(rcx + 0x18);
+				if (capacity >= 8) {
+					*data = *(uint64_t*)rcx;
+				} else {
+					*data = rcx;
+				}
+				*count = static_cast<DWORD>(length*2);
+			};
+			ConsoleOutput("Textractor: INSERT WillPlus64_1 Hook");
+			NewHook(hp, "WillPlus64_1");
+			flag = true;
+		}
+		gFlag |= flag;
+		if(!flag) {
+			ConsoleOutput("Textractor:WillPlus64_1: pattern not found");
+		}
+		flag = false;
+
+		// WillPlus7Hook 64bit Port
+		const BYTE bytes2[] = {
+			0x40, 0x56,				// push rsi	// hook here
+			0x57,					// push rdi
+			0x41, 0x56,				// push r14
+			0x48, 0x81, 0xEC, XX4,	// sub rsp,130
+			0x48, 0x83, 0x7A, XX2,	// cmp qword ptr ds:[rdx+18],7
+			0x49, 0x8B, 0xF8		// mov rdi,r8
+		};
+		for (auto addr : Util::SearchMemory(bytes2, sizeof(bytes2), PAGE_EXECUTE, processStartAddress, processStartAddress + range)) {
+			HookParam hp = {};
+			hp.address = addr;
+			hp.offset = pusha_rcx_off - 4;
+			hp.type = USING_STRING | USING_UNICODE;
+			hp.text_fun = [](uint64_t rsp_base, HookParam* pHp, BYTE, uint64_t* data, uintptr_t* split, DWORD* count) {
+				uint64_t rcx = regof(rcx, rsp_base);
+				uint64_t length = *(uint64_t*)(rcx + 0x10);
+				uint64_t capacity = *(uint64_t*)(rcx + 0x18);
+				if (capacity >= 8) {
+					*data = *(uint64_t*)rcx;
+				} else {
+					*data = rcx;
+				}
+				*count = static_cast<DWORD>(length*2);
+			};
+			ConsoleOutput("Textractor: INSERT WillPlus64_2 Hook");
+			NewHook(hp, "WillPlus64_2");
+			flag = true;
+		}
+		gFlag |= flag;
+		if(!flag) {
+			ConsoleOutput("Textractor:WillPlus64_2: pattern not found");
+		}
+
+		return gFlag;
+	}
+
 	bool UnsafeDetermineEngineType()
 	{
 		if (Util::CheckFile(L"PPSSPP*.exe") && FindPPSSPP()) return true;
@@ -2149,6 +2258,10 @@ void MonoCallBack(uintptr_t assembly, void *userData) {
 
 		if (Util::CheckFile(L"erc_nospfx.dll") || Util::CheckFile(L"erc.dll")) {
 			return InsertFuzzHook();
+		}
+
+		if (Util::CheckFile(L"Rio.arc") && Util::CheckFile(L"Chip*.arc")) {
+			return InsertWillPlus64Hook();
 		}
 
 		if (checkv8orcef())return true;

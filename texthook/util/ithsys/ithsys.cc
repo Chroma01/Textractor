@@ -33,6 +33,18 @@ DWORD SearchPattern(DWORD base, DWORD base_length, LPCVOID search, DWORD search_
 	return 0;
 }
 
+uintptr_t SearchPattern64(uintptr_t base, uintptr_t base_length, LPCVOID search, uintptr_t search_length)
+{
+    if (base_length < search_length) return 0;
+
+    for (uintptr_t i = 0; i <= base_length - search_length; ++i)
+       for (uintptr_t j = 0; j <= search_length; ++j)
+          if (j == search_length) return i;
+          else if (*((BYTE*)base + i + j) != *((BYTE*)search + j) && *((BYTE*)search + j) != XX) break;
+
+    return 0;
+}
+
 DWORD IthGetMemoryRange(LPCVOID mem, DWORD *base, DWORD *size)
 {
 	MEMORY_BASIC_INFORMATION info = {};
@@ -42,6 +54,17 @@ DWORD IthGetMemoryRange(LPCVOID mem, DWORD *base, DWORD *size)
 	if (size)
 		*size = info.RegionSize;
 	return info.Protect > PAGE_NOACCESS;
+}
+
+DWORD IthGetMemoryRange64(LPCVOID mem, uintptr_t *base, size_t *size)
+{
+    MEMORY_BASIC_INFORMATION info = {};
+    VirtualQuery(mem, &info, sizeof(info));
+    if (base)
+       *base = (uintptr_t)info.BaseAddress;
+    if (size)
+       *size = info.RegionSize;
+    return info.Protect > PAGE_NOACCESS;
 }
 
 // jichi 6/12/2015: https://en.wikipedia.org/wiki/Shift_JIS

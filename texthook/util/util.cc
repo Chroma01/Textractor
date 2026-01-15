@@ -281,25 +281,36 @@ DWORD FindImportEntry(DWORD hModule, DWORD fun)
 // Search string in rsrc section. This section usually contains version and copyright info.
 bool SearchResourceString(LPCWSTR str)
 {
-  DWORD hModule = (DWORD)GetModuleHandleW(nullptr);
-  IMAGE_DOS_HEADER *DosHdr;
-  IMAGE_NT_HEADERS *NtHdr;
-  DosHdr = (IMAGE_DOS_HEADER *)hModule;
-  DWORD rsrc, size;
-  //__asm int 3
-  if (IMAGE_DOS_SIGNATURE == DosHdr->e_magic) {
-    NtHdr = (IMAGE_NT_HEADERS *)(hModule + DosHdr->e_lfanew);
-    if (IMAGE_NT_SIGNATURE == NtHdr->Signature) {
-      rsrc = NtHdr->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_RESOURCE].VirtualAddress;
-      if (rsrc) {
-        rsrc += hModule;
-        if (IthGetMemoryRange((LPVOID)rsrc, &rsrc ,&size) &&
-            SearchPattern(rsrc, size - 4, str, wcslen(str) << 1))
-          return true;
-      }
+    uintptr_t hModule = (uintptr_t)GetModuleHandleW(nullptr);
+
+    IMAGE_DOS_HEADER *DosHdr = (IMAGE_DOS_HEADER *)hModule;
+    IMAGE_NT_HEADERS *NtHdr;
+
+    if (IMAGE_DOS_SIGNATURE == DosHdr->e_magic) {
+        NtHdr = (IMAGE_NT_HEADERS *)(hModule + DosHdr->e_lfanew);
+        if (IMAGE_NT_SIGNATURE == NtHdr->Signature) {
+            uintptr_t rsrc = NtHdr->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_RESOURCE].VirtualAddress;
+
+            if (rsrc) {
+                rsrc += hModule;
+
+#ifdef _WIN64
+                uintptr_t rsrcBase = 0;
+                size_t size = 0;
+                if (IthGetMemoryRange64((LPVOID)rsrc, &rsrcBase, &size) &&
+                    SearchPattern64(rsrcBase, size - 4, str, wcslen(str) << 1))
+                    return true;
+#else
+                DWORD rsrcBase = (DWORD)rsrc;
+                DWORD size = 0;
+                if (IthGetMemoryRange((LPVOID)rsrc, &rsrcBase, &size) &&
+                    SearchPattern(rsrcBase, size - 4, str, wcslen(str) << 1))
+                    return true;
+#endif
+            }
+        }
     }
-  }
-  return false;
+    return false;
 }
 
 std::pair<uint64_t, uint64_t> QueryModuleLimits(HMODULE module)

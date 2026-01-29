@@ -1966,18 +1966,25 @@ const BYTE bytes[] = {
     0x41                            // inc ecx
 };
 
-
+bool flag = false;
   ULONG range = min(processStopAddress - processStartAddress, MAX_REL_ADDR);
   ULONG addr = MemDbg::findBytes(bytes, sizeof(bytes), processStartAddress, processStartAddress + range);
   if (!addr) {
-    ConsoleOutput("vnreng:KiriKiriZ6c: pattern not found");
-    return false;
+    const BYTE bytes2[] = {
+      0x8B, 0x45, XX, 0x8B, 0x7B, XX, 0x8B, 0x5B
+    };
+    addr = MemDbg::findBytes(bytes2, sizeof(bytes2), processStartAddress, processStartAddress + range);
+    if (!addr) {
+      ConsoleOutput("vnreng:KiriKiriZ6c: pattern not found");
+      return false;
+    }
+    flag = true;
   }
 
   HookParam hp = {};
   hp.address = addr;
   hp.offset = pusha_esi_off -4;
-  hp.split  = 19 * 4; //arg 19
+  hp.split  = flag?0x50:19 * 4; //arg 19
   hp.type =  USING_UNICODE | USING_STRING | USING_SPLIT | NO_CONTEXT;
   hp.filter_fun = KiriKiriZ6Filter;
   ConsoleOutput("vnreng: INSERT KiriKiriZ6c");

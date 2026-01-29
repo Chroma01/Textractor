@@ -460,9 +460,9 @@ void MonoCallBack(uintptr_t assembly, void *userData) {
 
 	// sp
 	auto mono_schooldays_textwork_class = mono_class_from_name(image, "", "TextWork");
+	auto mono_advsys_class = mono_class_from_name(image,"","ADVsys"); // FuriKuru01
 
-
-    if (!mono_tmp_class && !mono_ugui_class && !mono_ngui_class && !mono_rpg_unite_class && !mono_naninovel_class && !mono_schooldays_textwork_class)
+    if (!mono_tmp_class && !mono_ugui_class && !mono_ngui_class && !mono_rpg_unite_class && !mono_naninovel_class && !mono_schooldays_textwork_class && !mono_advsys_class)
         return;
 
     // 附加到主domain（只需调用一次）
@@ -594,6 +594,36 @@ void MonoCallBack(uintptr_t assembly, void *userData) {
 				hp.length_fun = getV8StringLength;
 				ConsoleOutput("Mono_X64,Insert: Mono SP(School Days REMASTERED)");
 				NewHook(hp, "Mono_SP_SDR");
+			}
+		}
+	}
+
+	if (mono_advsys_class) {
+		auto mono_method = mono_class_get_method_from_name(mono_advsys_class,"TextUpdate",-1);
+		if (mono_method) {
+			uint64_t *method_pointer = mono_compile_method(mono_method);
+			if (method_pointer) {
+				HookParam hp = {};
+				hp.type = USING_STRING | USING_UNICODE;
+				hp.address = (uint64_t)method_pointer;
+				hp.offset = -0x28; // string phrase
+				hp.padding = 0x14;
+				hp.filter_fun = [](LPVOID data, DWORD* size, HookParam*, BYTE)
+				{
+					auto text = reinterpret_cast<LPWSTR>(data);
+					auto len =  static_cast<size_t>(*size);
+
+					if (len == 0)
+						return false;
+					WideStringFilter(text,&len,L"[cm]",4);
+					WideStringFilter(text,&len,L"[r]",3);
+					WideStringFilter(text,&len,L"[l]",3);
+					*size = static_cast<DWORD>(len);
+					return true;
+				};
+				hp.length_fun = getV8StringLength;
+				ConsoleOutput("Mono_X64,Insert: Mono SP(FuriKuru ADVsys)");
+				NewHook(hp, "Mono_SP_ADVSYS");
 			}
 		}
 	}

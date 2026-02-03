@@ -27280,7 +27280,7 @@ bool InsertGameMakerHook()
   hp.address = addr + addr_offset;
   hp.offset = pusha_eax_off -4;
   hp.index = 0;
-  hp.type = USING_STRING | NO_CONTEXT;
+  hp.type = USING_STRING | NO_CONTEXT | USING_UTF8;
   hp.filter_fun = GameMakerFilter;
   ConsoleOutput("vnreng: INSERT GameMaker");
   NewHook(hp, "GameMaker");

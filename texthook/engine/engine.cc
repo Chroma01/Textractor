@@ -7624,24 +7624,50 @@ bool InsertTinkerBellHook()
     0x56,                   // push esi
     0x57                    // push edi
 };
-
+  bool flag = true;
   ULONG range = min(processStopAddress - processStartAddress, MAX_REL_ADDR);
   DWORD addr = MemDbg::findBytes(bytes1, sizeof(bytes1), processStartAddress, processStartAddress + range);
   if (!addr) {
     addr = MemDbg::findBytes(bytes2, sizeof(bytes2), processStartAddress, processStartAddress + range);
     if (!addr) {
-      ConsoleOutput("vnreng:TinkerBell: failed");
-      return false;
+      ConsoleOutput("Textractor:TinkerBell: failed");
+      flag = false;
     }
   }
-  HookParam hp2 = {};
-  hp2.address = addr + 1;
-  hp2.offset = pusha_ebx_off - 4;
-  hp2.type = USING_UNICODE | USING_STRING;
-  hp2.filter_fun = TinkerBellRubyFilter;
-  ConsoleOutput("Textractor: INSERT TinkerBell");
-  NewHook(hp2, "TinkerBell");
-  return true;
+  if(flag) {
+    HookParam hp2 = {};
+    hp2.address = addr + 1;
+    hp2.offset = pusha_ebx_off - 4;
+    hp2.type = USING_UNICODE | USING_STRING;
+    hp2.filter_fun = TinkerBellRubyFilter;
+    ConsoleOutput("Textractor: INSERT TinkerBell");
+    NewHook(hp2, "TinkerBell");
+  }
+
+  // Tested:
+  // 友恵の探偵物語～のぞき魔な私の天職～体験版
+  // ノロワレ教室 ～校内いつでもどこでも姦らなくちゃ？！～
+  // 一根不浄
+  // 蠢牝 ～仄ちやう滴り～
+  // 三毒繚乱
+  const BYTE bytes3[] = { 0xE8, XX4, 0x8B, 0x85, XX4, 0x50, XX2, 0xFF, 0x51, XX, 0x8B, 0x86, XX4, 0x8B, 0x80, XX4, 0x50, XX2, 0xFF, 0x91 };
+  addr = MemDbg::findBytes(bytes3, sizeof(bytes3), processStartAddress, processStartAddress + range);
+  if (addr) {
+    flag = true;
+    HookParam hp3 = {};
+    hp3.address = addr;
+    hp3.offset = pusha_ebp_off - 4;
+    hp3.padding = 0x2;
+    hp3.index = 0x10;
+    hp3.type = USING_UNICODE | USING_STRING | DATA_INDIRECT;
+    hp3.filter_fun = TinkerBellRubyFilter;
+    ConsoleOutput("Textractor: INSERT TinkerBell2");
+    NewHook(hp3, "TinkerBell2");
+  } else {
+    ConsoleOutput("Textractor:TinkerBell2: failed");
+  }
+
+  return flag;
 }
 
 //  s1=SearchPattern(processStartAddress,processStopAddress-processStartAddress-4,&ch,4);

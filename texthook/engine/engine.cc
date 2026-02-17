@@ -15914,9 +15914,90 @@ bool InsertSilkys3Hook()
   return false;
 }
 
+bool InsertSilkys4Hook() {
+    //by Chenx221
+
+    // 同級生2 リメイク
+    // 野々村病院の人々 リメイク
+    // 55 8B EC 6A ?? 68 ?? ?? ?? ?? 64 A1 ?? ?? ?? ?? 50 83 EC ?? 53 56 57 A1 ?? ?? ?? ?? 33 C5 50 8D 45 ?? 64 A3 ?? ?? ?? ?? 8B D9 89 5D ?? E8
+    const BYTE bytes[] = {
+        0x55,
+        0x8B, 0xEC,
+        0x6A, XX,
+        0x68, XX4,
+        0x64, 0xA1, XX4,
+        0x50,
+        0x83, 0xEC, XX,
+        0x53,
+        0x56,
+        0x57,
+        0xA1, XX4,
+        0x33, 0xC5,
+        0x50,
+        0x8D, 0x45, XX,
+        0x64, 0xA3, XX4,
+        0x8B, 0xD9,
+        0x89, 0x5D, XX,
+        0xE8
+    };
+
+    // リルカは幾重に夜を彩る Trial
+    // 55 8B EC 6A ?? 68 ?? ?? ?? ?? 64 A1 ?? ?? ?? ?? 50 81 EC ?? ?? ?? ?? 53 56 57 A1 ?? ?? ?? ?? 33 C5 50 8D 45 ?? 64 A3 ?? ?? ?? ?? 8B D9 89 5D ?? 8B 75
+    const BYTE bytes1[] = {
+        0x55,
+        0x8B, 0xEC,
+        0x6A, XX,
+        0x68, XX4,
+        0x64, 0xA1, XX4,
+        0x50,
+        0x81, 0xEC, XX4,
+        0x53,
+        0x56,
+        0x57,
+        0xA1, XX4,
+        0x33, 0xC5,
+        0x50,
+        0x8D, 0x45, XX,
+        0x64, 0xA3, XX4,
+        0x8B, 0xD9,
+        0x89, 0x5D, XX,
+        0x8B, 0x75
+    };
+
+    ULONG range = min(processStopAddress - processStartAddress, MAX_REL_ADDR);
+    ULONG addr = MemDbg::findBytes(bytes, sizeof(bytes), processStartAddress, processStartAddress + range);
+    if(!addr){
+        addr = MemDbg::findBytes(bytes1, sizeof(bytes1), processStartAddress, processStartAddress + range);
+        if(!addr){
+            ConsoleOutput("Textractor:Silkys4: pattern not found");
+            return false;
+        }
+    }
+    HookParam hp = {};
+    hp.address = addr;
+    hp.padding = 0x8;
+    hp.offset = 0x4;
+    hp.type = USING_STRING | USING_UTF8;
+    hp.text_fun = [](DWORD esp_base, HookParam*, BYTE, DWORD *data, DWORD *split, DWORD* len)
+    {
+        DWORD obj_ptr = *(DWORD*)(esp_base + 0x4);
+        if (!obj_ptr) return;
+        DWORD capacity = *(DWORD*)(obj_ptr + 0x1C);
+        if (data) {
+            *data = (capacity >= 0x10) ? *(DWORD*)(obj_ptr + 0x08) : (obj_ptr + 0x08);
+        }
+        *len = *(DWORD*)(obj_ptr + 0x18);
+    };
+
+    ConsoleOutput("Textractor: INSERT Silkys4");
+    NewHook(hp, "Silkys4");
+    return true;
+}
+
 bool InsertSilkysHooks()
 { bool b = InsertSilkys3Hook();
-return InsertSilkysHook() || InsertSilkys2Hook() || b;}
+  bool c = InsertSilkys4Hook();
+return InsertSilkysHook() || InsertSilkys2Hook() || b || c;}
 
 /** jichi 6/1/2014 Eushully
  *  Insert to the last GetTextExtentPoint32A

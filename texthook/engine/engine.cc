@@ -28682,6 +28682,113 @@ bool InsertSakanaGLHook() {
 	return true;
 }
 
+bool InsertUnityIL2TMPHook() {
+	// By Chenx221
+
+	// Unity 2022.3.62 x32
+	// why are you still using 32bit unity in 2026?
+
+	// TMPro_TMP_Text__set_text
+	// 55 8B EC 56 8B 75 ?? 57 8B 7D ?? 80 BE ?? ?? ?? ?? ?? 75 ?? 83 BE
+	const BYTE bytes[] = {
+		0x55, 0x8B, 0xEC, 0x56, 0x8B, 0x75, XX, 0x57, 0x8B, 0x7D, XX, 0x80, 0xBE, XX4, XX, 0x75, XX, 0x83, 0xBE
+	};
+	bool flag = false;
+	HMODULE module = GetModuleHandleW(L"GameAssembly.dll");
+	auto [minAddress, maxAddress] = Util::QueryModuleLimits(module);
+    auto addr = MemDbg::findBytes(bytes, sizeof(bytes), minAddress, maxAddress);
+	if (addr) {
+		HookParam hp = {};
+		hp.address = addr;
+		hp.type = USING_STRING | USING_UNICODE;
+		hp.offset = 0x8;
+		hp.padding = 0xC;
+		hp.filter_fun = [](LPVOID data, DWORD* size, HookParam*, BYTE)
+		{
+			auto text = static_cast<LPWSTR>(data);
+			auto len =  static_cast<size_t>(*size);
+			if (len == 0)
+				return false;
+			std::wregex pattern(LR"(<[^>]+?>)");
+			RegexReplacerW(text, &len, pattern, L"");
+			*size = static_cast<DWORD>(len);
+			return true;
+		};
+		NewHook(hp, "TMPro_set_text");
+		ConsoleOutput("Insert: Unity IL2cpp TMPro Text Hook");
+		flag = true;
+	}
+
+    // draconcafe2把SetText(string)精简了，下次有机会再说吧
+	// // TMPro_TMP_Text__SetText
+	// const BYTE bytes2[] = {
+	// 	0xCC, 0x48, 0x89, 0x5C, 0x24, 0x08, 0x57, 0x48, 0x83, 0xEC, 0x30, 0x48, 0x8B, 0xFA, 0x48, 0x8B, 0xD9, 0x48, 0x85, 0xD2, 0x75
+	// };
+	// auto addr2 = MemDbg::findBytes(bytes2, sizeof(bytes2), minAddress, maxAddress);
+	// if (addr2) {
+	// 	HookParam hp = {};
+	// 	hp.address = addr2;
+	// 	hp.type = USING_STRING | USING_UNICODE;
+	// 	hp.offset = pusha_edx_off - 4;
+	// 	hp.padding = 0xC;
+	// 	hp.filter_fun = [](LPVOID data, DWORD* size, HookParam*, BYTE)
+	// 	{
+	// 		auto text = static_cast<LPWSTR>(data);
+	// 		auto len =  static_cast<size_t>(*size);
+	// 		if (len == 0)
+	// 			return false;
+	// 		std::wregex pattern(LR"(<[^>]+?>)");
+	// 		RegexReplacerW(text, &len, pattern, L"");
+	// 		*size = static_cast<DWORD>(len);
+	// 		return true;
+	// 	};
+	// 	NewHook(hp, "TMPro_SetText");
+	// 	ConsoleOutput("Insert: Unity IL2cpp TMPro Text Hook2");
+	// 	flag = true;
+	// }
+	if (flag) return flag;
+	ConsoleOutput("Textractor:UnityIL2TMPHook: pattern not found");
+	return false;
+}
+
+bool InsertUnityIl2GameSpHook() {
+  HMODULE module = GetModuleHandleW(L"GameAssembly.dll");
+	auto [minAddress, maxAddress] = Util::QueryModuleLimits(module);
+
+  // ドラ・コンカフェ2
+  // CatSystem.Module.CatSystem2.NovelCommand
+  // public void DisplayMessageText(string text)
+  // 56 8B 75 ?? 57 8B 46 ?? 8B F8
+  if (Util::CheckFile(L"draconcafe2.exe") && Util::CheckFile(L"draconcafe2_Data")) {
+    const BYTE bytes[] = {
+      0x56, 0x8B, 0x75, XX, 0x57, 0x8B, 0x46, XX, 0x8B, 0xF8
+    };
+    auto addr = MemDbg::findBytes(bytes, sizeof(bytes), minAddress, maxAddress);
+    if (addr) {
+      HookParam hp = {};
+      hp.address = addr;
+      hp.type = USING_STRING | USING_UNICODE | NO_CONTEXT | DATA_INDIRECT;
+      hp.offset = pusha_ebp_off - 4;
+      hp.index = 0xC;
+      hp.padding = 0xC;
+			hp.filter_fun = [](LPVOID data, DWORD* size, HookParam*, BYTE)
+			{
+				auto text = static_cast<LPWSTR>(data);
+				auto len =  static_cast<size_t>(*size);
+                WideStringFilter(text, &len, L"\\@", 2);
+                WideStringFilter(text, &len, L"\\n;", 3);
+                WideStringFilter(text, &len, L"\\n", 2);
+                WideCharFilter(text, &len, L'\u3000');
+				*size = static_cast<DWORD>(len);
+				return true;
+			};
+			NewHook(hp, "Unity_IL2cpp_SP_draconcafe2");
+			ConsoleOutput("Insert: Unity IL2cpp Game SP Hook (draconcafe2)");
+			return true;
+		}
+	}
+}
+
 } // namespace Engine
 
 // EOF

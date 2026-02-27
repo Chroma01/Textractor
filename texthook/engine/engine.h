@@ -223,6 +223,9 @@ bool InsertDmmHooks();          // DMM: Data/Exi_UT2.sdat
 // Anim engines
 bool InsertAnim3Hook();
 
+bool InsertUnityIL2TMPHook();
+bool InsertUnityIl2GameSpHook();
+
 } // namespace Engine
 
 // EOF

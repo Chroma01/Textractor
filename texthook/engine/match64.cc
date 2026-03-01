@@ -1664,6 +1664,7 @@ void MonoCallBack(uintptr_t assembly, void *userData) {
 	}
 	//BY:IOV
 	bool InsertGodotHook_X64() {
+		bool flag = false;
 		const BYTE bytes[] = { 0x8B,0x40,0xFC,0x83,0xF8,0x01,0x83,0xD0,0xFF,0x41,0x39,0xC6 };
 
 		ULONG64 range = min(processStopAddress - processStartAddress, X64_MAX_REL_ADDR);
@@ -1679,11 +1680,36 @@ void MonoCallBack(uintptr_t assembly, void *userData) {
 			char nameForUser[HOOK_NAME_SIZE] = "RichTextLabel_add_text";
 			NewHook(myhp, nameForUser);
 			ConsoleOutput("Insert: Godot_add_text_X64 Hook ");
-			return true;
+			flag = true;
 		}
 
-		ConsoleOutput("vnreng:Godot_x64: pattern not found");
-		return false;
+		// Godot 4.3 RichTextLabel_set_text
+		// 56 53 48 83 EC ?? ?? ?? ?? 48 89 CB 48 89 D6 48 85 C0 74 ?? 83 78 ?? ?? 77 ?? 48 8B 93
+		const BYTE bytes2[] = { 0x56,0x53,0x48,0x83,0xEC,XX4,0x48,0x89,0xCB,0x48,0x89,0xD6,0x48,0x85,0xC0,0x74,XX,0x83,0x78,XX2,0x77,XX,0x48,0x8B,0x93 };
+		for (auto addr : Util::SearchMemory(bytes2, sizeof(bytes2), PAGE_EXECUTE, processStartAddress, processStartAddress + range)) {
+			HookParam myhp = {};
+			myhp.address = addr + 0x9;
+			myhp.type = USING_STRING | USING_UNICODE | NO_CONTEXT | USING_SPLIT;
+			myhp.offset = pusha_rax_off - 4;
+			myhp.split = pusha_rcx_off - 4;
+			myhp.null_length = 4; // 不推荐的做法 但又不是不能用 文本是utf-32
+			char nameForUser[HOOK_NAME_SIZE] = "RichTextLabel_set_text";
+			NewHook(myhp, nameForUser);
+			ConsoleOutput("Insert: Godot_RichTextLabel_set_text_X64 Hook");
+			flag = true;
+		}
+
+		// Godot 4.4.1 RichTextLabel_set_text
+		// 48 89 5C 24 ?? 48 89 6C 24 ?? 48 89 74 24 ?? 57 48 83 EC ?? ?? ?? ?? 33 ED 48 8B D9 4D 85 C0
+		// 等一个同版本的godot游戏出现
+
+		// Godot 4.6 RichTextLabel_set_text
+		// 53 48 83 EC ?? 49 89 D0 ?? ?? ?? 48 89 CB
+		// 同上
+
+		if (!flag)
+			ConsoleOutput("vnreng:Godot_x64: pattern not found");
+		return flag;
 	}
 
 	bool InsertUnityIL2TMPHook() {
@@ -2282,7 +2308,7 @@ void MonoCallBack(uintptr_t assembly, void *userData) {
 	{
 		if (Util::CheckFile(L"PPSSPP*.exe") && FindPPSSPP()) return true;
 
-		if (Util::CheckFile(L"*.pck")) {
+		if (Util::CheckFile(L"*.pck") || Util::CheckFile(L"libgodotsteam*.dll") || Util::SearchResourceString(L"Godot Engine")) {
 			return InsertGodotHook_X64();
 		}
 

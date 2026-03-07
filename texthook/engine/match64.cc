@@ -2203,64 +2203,63 @@ void MonoCallBack(uintptr_t assembly, void *userData) {
 		// https://vndb.org/v61221 OfficeLove -クールな先輩彼女と秘密のイキ抜き- TRIAL EDITION
 
 		// WillPlus6Hook 64bit Port
+		// 2.1.0.0
+		// 48 8b c4 55 53 56 57 41 54 41 55 41 56 41 57 48 8d 6c 24 ?? 48 81 EC ?? ?? ?? ?? 0f 29 70 ?? 0f 29 78 ?? 44 0f 29 40 ?? 48 8b 05 ?? ?? ?? ?? 48 33 c4 48 89 45 ?? 4d 8b e1
 		const BYTE bytes[] = {
-			0x48, 0x8B, 0xC4,			// mov rax,rsp // hook here
-			0x55,						// push rbp
-			0x53,						// push rbx
-			0x56,						// push rsi
-			0x57,						// push rdi
-			0x41, 0x54,					// push r12
-			0x41, 0x55,					// push r13
-			0x41, 0x56,					// push r14
-			0x41, 0x57,					// push r15
-			0x48, 0x8D, 0x6C, 0x24, XX,	// lea rbp,qword ptr ss:[rsp-68]
-			0x48, 0x81, 0xEC, XX4,		// sub rsp,168
-			0x0F, 0x29, 0x70, XX,		// movaps xmmword ptr ds:[rax-58],xmm6
-			0x0F, 0x29, 0x78, XX,		// movaps xmmword ptr ds:[rax-68],xmm7
-			0x44, 0x0F, 0x29, 0x40, XX,	// movaps xmmword ptr ds:[rax-78],xmm8
-			0x48, 0x8B, 0x05, XX4,		// mov rax,qword ptr ds:[140468500]
-			0x48, 0x33, 0xC4,			// xor rax,rsp
-			0x48, 0x89, 0x45, XX,		// mov qword ptr ss:[rbp+28],rax
-			0x4D, 0x8B, 0xE1			// mov r12,r9
+			0x48, 0x8B, 0xC4, 0x55, 0x53, 0x56, 0x57, 0x41, 0x54, 0x41, 0x55, 0x41, 0x56, 0x41, 0x57, 0x48, 0x8D, 0x6C, 0x24, XX, 0x48, 0x81, 0xEC, XX4, 0x0F, 0x29, 0x70, XX, 0x0F, 0x29, 0x78, XX, 0x44, 0x0F, 0x29, 0x40, XX, 0x48, 0x8B, 0x05, XX4, 0x48, 0x33, 0xC4, 0x48, 0x89, 0x45, XX, 0x4D, 0x8B, 0xE1
+		};
+
+		// 有閑夫人倶楽部 -体験版-
+		// 2.1.1.0
+		// 48 8B C4 55 53 56 57 41 54 41 55 41 56 41 57 48 8D A8 ?? ?? ?? ?? 48 81 EC ?? ?? ?? ?? 0F 29 70 ?? 0F 29 78 ?? 44 0F 29 40 ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 45 ?? 4D 8B E1
+		const BYTE bytes1[] = {
+			0x48, 0x8B, 0xC4, 0x55, 0x53, 0x56, 0x57, 0x41, 0x54, 0x41, 0x55, 0x41, 0x56, 0x41, 0x57, 0x48, 0x8D, 0xA8, XX4, 0x48, 0x81, 0xEC, XX4, 0x0F, 0x29, 0x70, XX, 0x0F, 0x29, 0x78, XX, 0x44, 0x0F, 0x29, 0x40, XX, 0x48, 0x8B, 0x05, XX4, 0x48, 0x33, 0xC4, 0x48, 0x89, 0x45, XX, 0x4D, 0x8B, 0xE1
 		};
 
 		ULONG64 range = min(processStopAddress - processStartAddress, X64_MAX_REL_ADDR);
-		for (auto addr : Util::SearchMemory(bytes, sizeof(bytes), PAGE_EXECUTE, processStartAddress, processStartAddress + range)) {
-			HookParam hp = {};
-			hp.address = addr;
-			hp.offset = pusha_rcx_off - 4;
-			hp.type = USING_STRING | USING_UNICODE | NO_CONTEXT;
-			hp.filter_fun = [](void* str, DWORD* size, HookParam* hp, BYTE index) {
-				auto text = reinterpret_cast<LPWSTR>(str);
-				auto len = reinterpret_cast<size_t *>(size);
-				if (*text == L'/' || *text == L'|')
-					return false;
-				WideStringCharReplacer(text, len, L" \\n", 3, L' ');
-				WideStringCharReplacer(text, len, L"\\n", 2, L' ');
-				WideStringCharReplacer(text, len, L"\\d", 2, L'\"');
-				WideStringFilter(text, len, L"%LF", 3);
-				WideStringFilter(text, len, L"%LC", 3);
-				WideStringFilter(text, len, L"%K", 2);
-				WideStringFilter(text, len, L"%P", 2);
-				WideStringFilter(text, len, L"%XS", 5);
-				WideStringFilter(text, len, L"%XE", 3);
-				return true;
-			};
-			hp.text_fun = [](uint64_t rsp_base, HookParam* pHp, BYTE, uint64_t* data, uintptr_t* split, DWORD* count) {
-				uint64_t rcx = regof(rcx, rsp_base);
-				uint64_t length = *(uint64_t*)(rcx + 0x10);
-				uint64_t capacity = *(uint64_t*)(rcx + 0x18);
-				if (capacity >= 8) {
-					*data = *(uint64_t*)rcx;
-				} else {
-					*data = rcx;
-				}
-				*count = static_cast<DWORD>(length*2);
-			};
-			ConsoleOutput("Textractor: INSERT WillPlus64_1 Hook");
-			NewHook(hp, "WillPlus64_1");
-			flag = true;
+		auto doHook1 = [&](const BYTE* pattern, size_t patSize) {
+			for (auto addr : Util::SearchMemory(pattern, patSize, PAGE_EXECUTE, processStartAddress, processStartAddress + range)) {
+				HookParam hp = {};
+				hp.address = addr;
+				hp.offset = pusha_rcx_off - 4;
+				hp.type = USING_STRING | USING_UNICODE | NO_CONTEXT;
+				hp.filter_fun = [](void* str, DWORD* size, HookParam* hp, BYTE index) {
+					auto text = reinterpret_cast<LPWSTR>(str);
+					auto len = reinterpret_cast<size_t *>(size);
+					if (*text == L'/' || *text == L'|')
+						return false;
+					WideStringCharReplacer(text, len, L" \\n", 3, L' ');
+					WideStringCharReplacer(text, len, L"\\n", 2, L' ');
+					WideStringCharReplacer(text, len, L"\\d", 2, L'\"');
+					WideStringFilter(text, len, L"%LF", 3);
+					WideStringFilter(text, len, L"%LC", 3);
+					WideStringFilter(text, len, L"%K", 2);
+					WideStringFilter(text, len, L"%P", 2);
+					WideStringFilter(text, len, L"%XS", 5);
+					WideStringFilter(text, len, L"%XE", 3);
+					return true;
+				};
+				hp.text_fun = [](uint64_t rsp_base, HookParam* pHp, BYTE, uint64_t* data, uintptr_t* split, DWORD* count) {
+					uint64_t rcx = regof(rcx, rsp_base);
+					uint64_t length = *(uint64_t*)(rcx + 0x10);
+					uint64_t capacity = *(uint64_t*)(rcx + 0x18);
+					if (capacity >= 8) {
+						*data = *(uint64_t*)rcx;
+					} else {
+						*data = rcx;
+					}
+					*count = static_cast<DWORD>(length*2);
+				};
+				ConsoleOutput("Textractor: INSERT WillPlus64_1 Hook");
+				NewHook(hp, "WillPlus64_1");
+				flag = true;
+			}
+		};
+		doHook1(bytes, sizeof(bytes));
+		if (!flag) {
+			doHook1(bytes1, sizeof(bytes1));
 		}
+
 		gFlag |= flag;
 		if(!flag) {
 			ConsoleOutput("Textractor:WillPlus64_1: pattern not found");

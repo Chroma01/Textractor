@@ -1806,27 +1806,29 @@ void MonoCallBack(uintptr_t assembly, void *userData) {
 
 		// Donskoy.UI_MessageWindow.BeginMessage
 		// みんなの育乳アカデミー ～桃色おっぱい研修録～ 体験版
-		const BYTE bytes2[] = {
-			0x48, 0x89, 0x5C, 0x24, XX, 0x48, 0x89, 0x54, 0x24, XX, 0x57, 0x48, 0x83, 0xEC, XX, 0x48, 0x8B, 0xFA
-		};
-		for (auto addr: Util::SearchMemory(bytes2, sizeof(bytes2), PAGE_EXECUTE, minAddress, maxAddress)) {
-			HookParam hp = {};
-			hp.address = addr;
-			hp.type = USING_STRING | USING_UNICODE | NO_CONTEXT;
-			hp.offset = pusha_rdx_off - 4;
-			hp.padding = 0x14;
-			hp.filter_fun = [](LPVOID data, DWORD* size, HookParam*, BYTE)
-			{
-				auto text = static_cast<LPWSTR>(data);
-				auto len =  static_cast<size_t>(*size);
-				std::wregex pattern(LR"(\([/]?f[^)]*\)|<([^,]+),[^>]+>)");
-				RegexReplacerW(text, &len, pattern, L"$1");
-				*size = static_cast<DWORD>(len);
-				return true;
+		if (Util::CheckFile(L"ikunyu.exe") && Util::CheckFile(L"ikunyu_Data")) {
+			const BYTE bytes2[] = {
+				0x48, 0x89, 0x5C, 0x24, XX, 0x48, 0x89, 0x54, 0x24, XX, 0x57, 0x48, 0x83, 0xEC, XX, 0x48, 0x8B, 0xFA
 			};
-			NewHook(hp, "Unity_IL2cpp_SP_Donskoy_UI_MessageWindow");
-			ConsoleOutput("Insert: Unity IL2cpp Game SP Hook (Donskoy.UI_MessageWindow.BeginMessage)");
-			return true;
+			for (auto addr: Util::SearchMemory(bytes2, sizeof(bytes2), PAGE_EXECUTE, minAddress, maxAddress)) {
+				HookParam hp = {};
+				hp.address = addr;
+				hp.type = USING_STRING | USING_UNICODE | NO_CONTEXT;
+				hp.offset = pusha_rdx_off - 4;
+				hp.padding = 0x14;
+				hp.filter_fun = [](LPVOID data, DWORD* size, HookParam*, BYTE)
+				{
+					auto text = static_cast<LPWSTR>(data);
+					auto len =  static_cast<size_t>(*size);
+					std::wregex pattern(LR"(\([/]?f[^)]*\)|<([^,]+),[^>]+>)");
+					RegexReplacerW(text, &len, pattern, L"$1");
+					*size = static_cast<DWORD>(len);
+					return true;
+				};
+				NewHook(hp, "Unity_IL2cpp_SP_Donskoy_UI_MessageWindow");
+				ConsoleOutput("Insert: Unity IL2cpp Game SP Hook (Donskoy.UI_MessageWindow.BeginMessage)");
+				return true;
+			}
 		}
 
 		return false;

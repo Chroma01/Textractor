@@ -1772,6 +1772,42 @@ void MonoCallBack(uintptr_t assembly, void *userData) {
 		return false;
 	}
 
+	bool InsertUnityIL2UtageHook() {
+		// Utage.TextData__ctor
+		// Tested: twinkle_starknightsX.exe (ティンクルスターナイツX)
+		// CC 48 89 5C 24 ?? 48 89 74 24 ?? 57 48 83 EC ?? 0F 29 74 24 ?? 48 8B F2 48 8B F9 80 3D
+		const BYTE bytes[] = {
+			0xCC, 0x48, 0x89, 0x5C, 0x24, XX, 0x48, 0x89, 0x74, 0x24, XX, 0x57, 0x48, 0x83, 0xEC, XX, 0x0F, 0x29, 0x74, 0x24, XX, 0x48, 0x8B, 0xF2, 0x48, 0x8B, 0xF9, 0x80, 0x3D
+		};
+		HMODULE module = GetModuleHandleW(L"GameAssembly.dll");
+		bool flag = false;
+		auto [minAddress, maxAddress] = Util::QueryModuleLimits(module);
+		for (auto addr: Util::SearchMemory(bytes, sizeof(bytes), PAGE_EXECUTE, minAddress, maxAddress)) {
+			HookParam hp = {};
+			hp.address = addr + 1;
+			hp.type = USING_STRING | USING_UNICODE;
+			hp.offset = pusha_rdx_off - 4;
+			hp.padding = 0x14;
+			hp.filter_fun = [](LPVOID data, DWORD* size, HookParam*, BYTE)
+			{
+				auto text = static_cast<LPWSTR>(data);
+				auto len =  static_cast<size_t>(*size);
+				if (len == 0)
+					return false;
+				std::wregex pattern(LR"(<[^>]+?>)");
+				RegexReplacerW(text, &len, pattern, L"");
+				*size = static_cast<DWORD>(len);
+				return true;
+			};
+			NewHook(hp, "Utage_TextData__ctor");
+			ConsoleOutput("Insert: Unity IL2cpp Utage TextData Hook");
+			flag = true;
+		}
+		if (flag) return flag;
+		ConsoleOutput("Textractor:UnityIL2UtageHook: pattern not found");
+		return false;
+	}
+
 	bool InsertUnityIl2GameSpHook() {
 		HMODULE module = GetModuleHandleW(L"GameAssembly.dll");
 		auto [minAddress, maxAddress] = Util::QueryModuleLimits(module);
@@ -2329,6 +2365,7 @@ void MonoCallBack(uintptr_t assembly, void *userData) {
 		{
 			ConsoleOutput("Textractor: Precompiled Unity found (searching for hooks should work)");
 			InsertUnityIL2TMPHook();
+			InsertUnityIL2UtageHook();
 			InsertUnityIl2GameSpHook();
 			wcscpy_s(spDefault.boundaryModule, L"GameAssembly.dll");
 			spDefault.padding = 20;

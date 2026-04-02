@@ -21757,34 +21757,20 @@ bool InsertAnim3Hook()
     0x89, 0x45, 0xE8            // mov [ebp-18],eax
   };
 
-  // mod by Chenx221
+  // By Chenx221
   /*
     PlayDRM ok
     Sample games:
     https://vndb.org/v48594
     https://vndb.org/v52822
     https://vndb.org/v55359
-    https://vndb.org/v57286 (Trial)
-    https://vndb.org/v59411 (Trial)
+    https://vndb.org/v57286
+    https://vndb.org/v59411
+    https://vndb.org/v61833 (Trial)
   */
+
   const BYTE bytes2[] = {
-      // 0xCC,                                   // int3
-      0x55,                                   // push ebp      << hook here
-      0x8B, 0xEC,                             // mov ebp,esp
-      0x6A, XX,                               // push FFFFFFFF
-      0x68, XX4,                              // push mamahaha2.CA311B
-      0x64, 0xA1, XX4,                        // mov eax,dword ptr fs:[0]
-      0x50,                                   // push eax
-      0x81, 0xEC, XX4,                        // sub esp,D20
-      0xA1, XX4,                              // mov eax,dword ptr ds:[CBC010]
-      0x33, 0xC5,                             // xor eax,ebp
-      0x89, 0x45, XX,                         // mov dword ptr ss:[ebp-10],eax
-      0x56,                                   // push esi
-      0x50,                                   // push eax
-      0x8D, 0x45, XX,                         // lea eax,dword ptr ss:[ebp-C]
-      0x64, 0xA3, XX4,                        // mov dword ptr fs:[0],eax
-      0x89, 0x8D, XX4,                        // mov dword ptr ss:[ebp-CA8],ecx
-      0xC7, 0x85
+    0x55, 0x8B, 0xEC, 0x6A, XX, 0x68, XX4, 0x64, 0xA1, XX4, 0x50, 0xB8, XX4, 0xE8, XX4, 0xA1, XX4, 0x33, 0xC5, 0x89, 0x45, XX, 0x50, 0x8D, 0x45, XX, 0x64, 0xA3, XX4, 0x89, 0x8D, XX4, 0x83, 0x7D, XX2, 0x75, XX, 0x83, 0xC8
   };
   ULONG range = min(processStopAddress - processStartAddress, MAX_REL_ADDR);
   ULONG addr = MemDbg::findBytes(bytes, sizeof(bytes), processStartAddress, processStartAddress + range);
@@ -21795,7 +21781,7 @@ bool InsertAnim3Hook()
       return false;
     }
     // hp.offset = pusha_eax_off - 4;
-    hp.offset = 4;
+    hp.offset = 0x10;
     hp.address = addr;
   }else{
     hp.offset = pusha_edx_off - 4;

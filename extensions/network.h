@@ -161,23 +161,31 @@ namespace JSON
 	}
 
 	template <typename C>
-	struct Value : private std::variant<std::monostate, std::nullptr_t, bool, double, std::basic_string<C>, std::vector<Value<C>>, std::unordered_map<std::basic_string<C>, Value<C>>>
+	struct Value
 	{
-		using std::variant<std::monostate, std::nullptr_t, bool, double, std::basic_string<C>, std::vector<Value<C>>, std::unordered_map<std::basic_string<C>, Value<C>>>::variant;
+		using Base = std::variant<std::monostate, std::nullptr_t, bool, double, std::basic_string<C>, std::vector<Value<C>>, std::unordered_map<std::basic_string<C>, Value<C>>>;
 
-		explicit operator bool() const { return index(); }
-		bool IsNull() const { return index() == 1; }
-		bool IsArray() const { return std::holds_alternative<std::vector<Value<C>>>(*this); }
-		bool IsObject() const { return std::holds_alternative<std::unordered_map<std::basic_string<C>, Value<C>>>(*this); }
-		bool IsString() const { return std::holds_alternative<std::basic_string<C>>(*this); }
+		Value() = default;
+		Value(std::nullptr_t value) : data(value) {}
+		Value(bool value) : data(value) {}
+		Value(double value) : data(value) {}
+		Value(std::basic_string<C> value) : data(std::move(value)) {}
+		Value(std::vector<Value<C>> value) : data(std::move(value)) {}
+		Value(std::unordered_map<std::basic_string<C>, Value<C>> value) : data(std::move(value)) {}
+
+		explicit operator bool() const { return data.index(); }
+		bool IsNull() const { return data.index() == 1; }
+		bool IsArray() const { return std::holds_alternative<std::vector<Value<C>>>(data); }
+		bool IsObject() const { return std::holds_alternative<std::unordered_map<std::basic_string<C>, Value<C>>>(data); }
+		bool IsString() const { return std::holds_alternative<std::basic_string<C>>(data); }
 
 		size_t Size() const { if (auto array = Array()) return array->size(); return 0; }
 
-		auto Boolean() const { return std::get_if<bool>(this); }
-		auto Number() const { return std::get_if<double>(this); }
-		auto String() const { return std::get_if<std::basic_string<C>>(this); }
-		auto Array() const { return std::get_if<std::vector<Value<C>>>(this); }
-		auto Object() const { return std::get_if<std::unordered_map<std::basic_string<C>, Value<C>>>(this); }
+		const bool* Boolean() const { return std::get_if<bool>(&data); }
+		const double* Number() const { return std::get_if<double>(&data); }
+		const std::basic_string<C>* String() const { return std::get_if<std::basic_string<C>>(&data); }
+		const std::vector<Value<C>>* Array() const { return std::get_if<std::vector<Value<C>>>(&data); }
+		const std::unordered_map<std::basic_string<C>, Value<C>>* Object() const { return std::get_if<std::unordered_map<std::basic_string<C>, Value<C>>>(&data); }
 
 		const Value<C>& operator[](std::basic_string<C> key) const
 		{
@@ -191,6 +199,9 @@ namespace JSON
 		}
 
 		static const Value<C> failure;
+
+	private:
+		Base data;
 	};
 	template <typename C> const Value<C> Value<C>::failure;
 	
@@ -241,14 +252,20 @@ namespace JSON
 
 		constexpr C nullStr[] = { 'n', 'u', 'l', 'l' }, trueStr[] = { 't', 'r', 'u', 'e' }, falseStr[] = { 'f', 'a', 'l', 's', 'e' };
 		if (ch == nullStr[0])
+		{
 			if (std::char_traits<C>::compare(text.data() + i, nullStr, std::size(nullStr)) == 0) return i += std::size(nullStr), nullptr;
-			else return {};
+			return {};
+		}
 		if (ch == trueStr[0])
+		{
 			if (std::char_traits<C>::compare(text.data() + i, trueStr, std::size(trueStr)) == 0) return i += std::size(trueStr), true;
-			else return {};
+			return {};
+		}
 		if (ch == falseStr[0])
+		{
 			if (std::char_traits<C>::compare(text.data() + i, falseStr, std::size(falseStr)) == 0) return i += std::size(falseStr), false;
-			else return {};
+			return {};
+		}
 
 		if (ch == '-' || (ch >= '0' && ch <= '9'))
 		{

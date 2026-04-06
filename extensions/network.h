@@ -20,6 +20,20 @@ struct HttpRequest
 		const wchar_t* httpVersion = NULL,
 		const wchar_t** acceptTypes = NULL
 	);
+	HttpRequest(
+		const wchar_t* agentName,
+		const wchar_t* serverName,
+		const wchar_t* action,
+		const wchar_t* objectName,
+		std::string body,
+		const wchar_t* headers,
+		DWORD port,
+		const wchar_t* referrer,
+		DWORD requestFlags,
+		const wchar_t* httpVersion,
+		const wchar_t** acceptTypes,
+		DWORD timeoutMs
+	);
 	operator bool() { return errorCode == ERROR_SUCCESS; }
 
 	std::wstring response;
@@ -27,6 +41,7 @@ struct HttpRequest
 	InternetHandle connection = NULL;
 	InternetHandle request = NULL;
 	DWORD errorCode = ERROR_SUCCESS;
+	DWORD statusCode = 0;
 };
 
 std::wstring Escape(const std::wstring& text);

@@ -637,8 +637,37 @@ namespace
 		if (!(QApplication::mouseButtons() & Qt::LeftButton)) ui.textOutput->copy();
 	}
 
+	std::wstring DescribeWinHttpError(DWORD errorCode)
+	{
+		if (errorCode == ERROR_WINHTTP_TIMEOUT) return L"request timed out";
+		if (errorCode == ERROR_WINHTTP_NAME_NOT_RESOLVED) return L"DNS resolve failed";
+		if (errorCode == ERROR_WINHTTP_CANNOT_CONNECT) return L"cannot connect to server";
+		if (errorCode == ERROR_WINHTTP_CONNECTION_ERROR) return L"connection dropped";
+		if (errorCode == ERROR_WINHTTP_SECURE_FAILURE) return L"TLS/SSL handshake failed";
+		if (errorCode == ERROR_WINHTTP_INVALID_SERVER_RESPONSE) return L"invalid server response";
+		if (errorCode == ERROR_WINHTTP_OPERATION_CANCELLED) return L"request cancelled";
+
+		LPWSTR systemMessage = nullptr;
+		DWORD messageLength = FormatMessageW(
+			FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+			nullptr,
+			errorCode,
+			MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+			(LPWSTR)&systemMessage,
+			0,
+			nullptr
+		);
+		if (!messageLength || !systemMessage) return L"unknown error";
+
+		std::wstring message(systemMessage, messageLength);
+		LocalFree(systemMessage);
+		while (!message.empty() && (message.back() == L'\r' || message.back() == L'\n' || message.back() == L' ')) message.pop_back();
+		return message;
+	}
+
 	void CheckForUpdates()
 	{
+		constexpr DWORD UPDATE_CHECK_TIMEOUT_MS = 5000;
 		QString dllPath = QCoreApplication::applicationDirPath() + "/texthook.dll";
 		QFile file(dllPath);
 
@@ -658,11 +687,39 @@ namespace
 			L"api.iloli.one",
 			L"GET",
 			FormatString(L"/checkUpdate?sha256=%S", sha256.toStdString()).c_str(),
+			"",
+			nullptr,
+			INTERNET_DEFAULT_HTTPS_PORT,
+			nullptr,
+			WINHTTP_FLAG_SECURE | WINHTTP_FLAG_ESCAPE_DISABLE,
+			nullptr,
+			nullptr,
+			UPDATE_CHECK_TIMEOUT_MS
 		}) {
+			if (httpRequest.statusCode != 200) {
+				Host::AddConsoleOutput(FormatString(
+					L"Update check failed: HTTP status %u.",
+					httpRequest.statusCode
+				));
+				return;
+			}
+
+			if (httpRequest.response.empty()) {
+				Host::AddConsoleOutput(L"Update check failed: empty server response.");
+				return;
+			}
+
 			auto response = JSON::Parse(httpRequest.response);
+			if (!response.IsObject()) {
+				Host::AddConsoleOutput(L"Update check failed: malformed JSON response.");
+				return;
+			}
 
 			if (response[L"error"]) {
-				Host::AddConsoleOutput(FormatString(L"%s",response[L"error"].String()));
+				if (auto errorMessage = response[L"error"].String())
+					Host::AddConsoleOutput(FormatString(L"Update check failed: %s", errorMessage->c_str()));
+				else
+					Host::AddConsoleOutput(L"Update check failed: server returned an unknown error.");
 				return;
 			}
 			if (response[L"update"].Boolean()) {
@@ -677,6 +734,9 @@ namespace
 			} else
 				Host::AddConsoleOutput(L"Unexpected response from update server. Maybe my server already exploded?\n"
 						   "Try visiting the update server in an external browser to see what's happening: https://api.iloli.one");
+		} else {
+			Host::AddConsoleOutput(FormatString(L"Update check failed: %s (code=%u).",
+				DescribeWinHttpError(httpRequest.errorCode).c_str(), httpRequest.errorCode));
 		}
 	}
 }

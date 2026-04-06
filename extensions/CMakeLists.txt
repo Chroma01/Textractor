@@ -120,7 +120,7 @@ target_link_libraries(DevTools_Papago_Translate shell32 winhttp Qt5::Widgets Qt5
 target_link_libraries(DevTools_Systran_Translate shell32 winhttp Qt5::Widgets Qt5::WebSockets)
 target_link_libraries(Extra_Window Qt5::Widgets)
 target_link_libraries(Extra_Window_Test Qt5::Widgets)
-target_link_libraries(Google_Translate winhttp Qt5::Widgets)
+target_link_libraries(Google_Translate winhttp Qt5::Widgets nlohmann_json::nlohmann_json)
 target_link_libraries(Google_Translate2 winhttp Qt5::Widgets nlohmann_json::nlohmann_json)
 target_link_libraries(Lua lua53 Qt5::Widgets)
 target_link_libraries(Regex_Filter Qt5::Widgets)

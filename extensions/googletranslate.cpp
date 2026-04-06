@@ -1,6 +1,9 @@
 ﻿#include "qtcommon.h"
 #include "translatewrapper.h"
 #include "network.h"
+#include <nlohmann/json.hpp>
+
+using json = nlohmann::json;
 
 extern const wchar_t *TRANSLATION_ERROR;
 
@@ -411,48 +414,89 @@ std::pair<bool, std::wstring> Translate(const std::wstring &text, TranslationPar
             std::wstring translateFromComponent = tlp.translateFrom == L"?"
                                                       ? L""
                                                       : L"&source=" + codes.at(tlp.translateFrom);
+            json requestPayload = {
+                {"q", json::array({WideStringToString(text)})}
+            };
             if (HttpRequest httpRequest{
                 L"Mozilla/5.0 Textractor",
                 L"translation.googleapis.com",
                 L"POST",
                 FormatString(L"/language/translate/v2?format=text&target=%s&key=%s%s", codes.at(tlp.translateTo),
                              tlp.authKey, translateFromComponent).c_str(),
-                FormatString(R"({"q":["%s"]})", JSON::Escape(WideStringToString(text)))
+                requestPayload.dump()
             })
-                if (auto translation = Copy(
-                    JSON::Parse(httpRequest.response)[L"data"][L"translations"][0][L"translatedText"].String())) return
-                        {true, translation.value()};
-                else return {false, FormatString(L"%s: %s", TRANSLATION_ERROR, httpRequest.response)};
+                try {
+                    auto parsedJson = json::parse(WideStringToString(httpRequest.response));
+                    if (!parsedJson.contains("data") ||
+                        !parsedJson["data"].contains("translations") ||
+                        !parsedJson["data"]["translations"].is_array() ||
+                        parsedJson["data"]["translations"].empty() ||
+                        !parsedJson["data"]["translations"][0].contains("translatedText") ||
+                        !parsedJson["data"]["translations"][0]["translatedText"].is_string()) {
+                        return {false, FormatString(L"%s: %s", TRANSLATION_ERROR, httpRequest.response)};
+                    }
+                    auto translatedText = StringToWideString(
+                        parsedJson["data"]["translations"][0]["translatedText"].get<std::string>()
+                    );
+                    if (auto translation = Copy(&translatedText)) return {true, translation.value()};
+                    return {false, FormatString(L"%s: %s", TRANSLATION_ERROR, httpRequest.response)};
+                } catch (const json::exception &e) {
+                    return {false, FormatString(L"%s: JSON parse error: %s", TRANSLATION_ERROR,
+                                                StringToWideString(e.what()).c_str())};
+                }
             else return {false, FormatString(L"%s (code=%u)", TRANSLATION_ERROR, httpRequest.errorCode)};
         }
 
         std::wstring from = codes.at(tlp.translateFrom), to = codes.at(tlp.translateTo);
-        if (HttpRequest httpRequest{
-            L"Mozilla/5.0 Textractor",
-            L"translate-pa.googleapis.com",
-            L"POST",
-            L"/v1/translateHtml",
-            FormatString(R"([[["%s"],"%s","%s"],"wt_lib"])", JSON::Escape(HTML::Escape(WideStringToString(text))),
-                         WideStringToString(from), WideStringToString(to)).c_str(), //还有个te_lib 不知道有没有别的效果
-            L"Host: translate-pa.googleapis.com\r\nX-Goog-API-Key: AIzaSyATBXajvzQLTDHEQbcpq0Ihe0vWDHmO520\r\nContent-Type: application/json+protobuf"
-        }) {
-            if (httpRequest.response.empty()) {
-                return {false, L"Empty response from translation API"};
-            }
-            auto parsedJson = JSON::Parse(httpRequest.response);
-            if (!parsedJson.IsArray() || parsedJson.Size() == 0) {
-                return {false, L"Invalid JSON response format"};
-            }
-            auto a = parsedJson[0][0];
-            if (!a.IsString()) {
-                return {false, L"Unexpected JSON response structure"};
-            }
+        json requestPayload = json::array({
+            json::array({
+                json::array({HTML::Escape(WideStringToString(text))}),
+                WideStringToString(from),
+                WideStringToString(to)
+            }),
+            "wt_lib"
+        });
 
-            auto str = HTML::Unescape(JSON::Unescape(*a.String()));
-            if (auto translation = Copy(&str))
-                return {true, translation.value()};
-            return {false, FormatString(L"%s: %s", TRANSLATION_ERROR, httpRequest.response)};
-        } else return {false, FormatString(L"%s (code=%u)", TRANSLATION_ERROR, httpRequest.errorCode)};
+        std::wstring lastError = L"";
+        constexpr int maxRetries = 3;
+        for (int retry = 0; retry < maxRetries; ++retry) {
+            if (HttpRequest httpRequest{
+                L"Mozilla/5.0 Textractor",
+                L"translate-pa.googleapis.com",
+                L"POST",
+                L"/v1/translateHtml",
+                requestPayload.dump(), // 还有个te_lib 不知道有没有别的效果
+                L"Host: translate-pa.googleapis.com\r\nX-Goog-API-Key: AIzaSyATBXajvzQLTDHEQbcpq0Ihe0vWDHmO520\r\nContent-Type: application/json+protobuf"
+            }) {
+                if (httpRequest.response.empty()) {
+                    lastError = L"Empty response from translation API";
+                    continue;
+                }
+
+                try {
+                    auto parsedJson = json::parse(WideStringToString(httpRequest.response));
+                    if (!parsedJson.is_array() || parsedJson.empty() ||
+                        !parsedJson[0].is_array() || parsedJson[0].empty() ||
+                        !parsedJson[0][0].is_string()) {
+                        lastError = L"Unexpected JSON response structure";
+                        continue;
+                    }
+
+                    auto str = HTML::Unescape(StringToWideString(parsedJson[0][0].get<std::string>()));
+                    if (auto translation = Copy(&str)) return {true, translation.value()};
+                    lastError = FormatString(L"%s: %s", TRANSLATION_ERROR, httpRequest.response);
+                    continue;
+                } catch (const json::exception &e) {
+                    lastError = FormatString(L"%s: JSON parse error: %s", TRANSLATION_ERROR,
+                                             StringToWideString(e.what()).c_str());
+                    continue;
+                }
+            } else {
+                lastError = FormatString(L"%s (code=%u)", TRANSLATION_ERROR, httpRequest.errorCode);
+            }
+        }
+
+        return {false, lastError.empty() ? FormatString(L"%s: retry limit reached", TRANSLATION_ERROR) : lastError};
     } catch (const std::out_of_range &e) {
         return {false, FormatString(L"Key error in translation map: %s", StringToWideString(e.what()).c_str())};
     }

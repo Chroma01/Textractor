@@ -27545,7 +27545,7 @@ bool InsertCodeXHook()
   hp.address = addr;
   hp.offset = pusha_eax_off -4;
   hp.index = 0;
-  hp.type = USING_STRING;
+  hp.type = USING_STRING | NO_CONTEXT;
   hp.filter_fun = CodeXFilter;
   ConsoleOutput("vnreng: INSERT CodeX");
   NewHook(hp, "CodeX");

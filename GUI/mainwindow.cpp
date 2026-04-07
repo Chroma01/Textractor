@@ -180,30 +180,40 @@ namespace
 
 	void AttachProcess()
 	{
-		QMultiHash<QString, DWORD> processesMap;
-		std::vector<std::pair<QString, HICON>> processIcons;
-		for (auto [processId, processName] : GetAllProcesses())
-		{
-			if (processName && (showSystemProcesses || processName->find(L":\\Windows\\") == std::string::npos))
+		auto getProcessList = []() -> std::vector<ProcessInfo> {
+			std::vector<ProcessInfo> processInfoList;
+			for (auto [processId, processName] : GetAllProcesses())
 			{
-				QString fileName = QFileInfo(S(processName.value())).fileName();
-				if (!processesMap.contains(fileName))
+				if (processName && (showSystemProcesses || processName->find(L":\\Windows\\") == std::string::npos))
 				{
-					HICON bigIcon, smallIcon;
-					ExtractIconExW(processName->c_str(), 0, &bigIcon, &smallIcon, 1);
-					processIcons.push_back({ fileName, bigIcon ? bigIcon : smallIcon });
-				}
-				processesMap.insert(fileName, processId);
-			}
-		}
-		std::sort(processIcons.begin(), processIcons.end(), [](auto one, auto two) { return QString::compare(one.first, two.first, Qt::CaseInsensitive) < 0; });
+					QString fileName = QFileInfo(S(processName.value())).fileName();
+					HICON hIcon = nullptr;
+					ExtractIconExW(processName->c_str(), 0, &hIcon, nullptr, 1);
 
-		AttachProcessDialog attachProcessDialog(This, processIcons);
+					auto windowTitle = GetProcessMainWindowTitle(processId);
+					bool is64Bit = IsProcess64Bit(processId);
+
+					processInfoList.emplace_back(
+						processId,
+						fileName,
+						windowTitle ? S(windowTitle.value()) : QString(),
+						is64Bit,
+						hIcon
+					);
+				}
+			}
+			std::sort(processInfoList.begin(), processInfoList.end(), [](const auto& one, const auto& two)
+			{
+				return QString::compare(one.processName, two.processName, Qt::CaseInsensitive) < 0;
+			});
+			return processInfoList;
+		};
+
+		AttachProcessDialog attachProcessDialog(This, getProcessList(), getProcessList);
 		if (attachProcessDialog.exec())
 		{
-			QString process = attachProcessDialog.SelectedProcess();
-			if (int processId = process.toInt(nullptr, 0)) Host::InjectProcess(processId);
-			else for (int processId : processesMap.values(process)) Host::InjectProcess(processId);
+			DWORD processId = attachProcessDialog.SelectedProcessId();
+			if (processId) Host::InjectProcess(processId);
 		}
 	}
 

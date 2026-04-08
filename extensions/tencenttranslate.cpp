@@ -120,7 +120,7 @@ std::pair<bool, std::wstring> Translate(const std::wstring &text, TranslationPar
 		// Tencent Cloud API parameters
 		std::string service = "tmt";
 		std::string host = "tmt.tencentcloudapi.com";
-		// std::string region = "ap-shanghai";
+		std::string region = "ap-shanghai";
 		std::string action = "TextTranslate";
 		std::string version = "2018-03-21";
 		std::string algorithm = "TC3-HMAC-SHA256";
@@ -171,7 +171,7 @@ std::pair<bool, std::wstring> Translate(const std::wstring &text, TranslationPar
 		headers += L"X-TC-Action: " + StringToWideString(action) + L"\r\n";
 		headers += L"X-TC-Timestamp: " + std::to_wstring(timestamp) + L"\r\n";
 		headers += L"X-TC-Version: " + StringToWideString(version) + L"\r\n";
-		// headers += L"X-TC-Region: " + StringToWideString(region) + L"\r\n";
+		headers += L"X-TC-Region: " + StringToWideString(region) + L"\r\n";
 
 		if (HttpRequest httpRequest{
 			L"Mozilla/5.0 Textractor",

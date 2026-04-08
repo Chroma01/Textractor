@@ -1,17 +1,21 @@
 ﻿#include "qtcommon.h"
 #include "translatewrapperaliyun.h"
 #include "network.h"
-// #include <rapidjson/document.h>
-// #include <curl/curl.h>
+#include "hashutils.h"
+#include <nlohmann/json.hpp>
+#include <ctime>
+#include <atomic>
+
+using json = nlohmann::json;
 
 extern const wchar_t *TRANSLATION_ERROR;
 
 const char *TRANSLATION_PROVIDER = "Aliyun Translate";
 const char *GET_API_KEY_FROM =
-        "http://127.0.0.1/";
+        "https://help.aliyun.com/zh/machine-translation";
 
 extern const QStringList version{
-    "free"//, "general", "pro"
+    "free", "general", "pro"
 };
 extern const QStringList languagesTo
         {
@@ -450,18 +454,52 @@ extern const std::unordered_map<std::wstring, std::wstring> codes
 };
 
 bool translateSelectedOnly = false, useRateLimiter = true, rateLimitSelected = false, useCache = true, useFilter = true;
-int tokenCount = 30, rateLimitTimespan = 60000, maxSentenceSize = 5000;
+int tokenCount = 50, rateLimitTimespan = 1000, maxSentenceSize = 1000;
 
-// std::string UrlEncode(CURL *curl, const std::string &value) {
-//     char *output = curl_easy_escape(curl, value.c_str(), value.length());
-//     std::string encoded(output);
-//     curl_free(output);
-//     return encoded;
-// }
+// Helper function to generate GMT time string
+std::string GetGMTTime()
+{
+    time_t now = time(nullptr);
+    tm gmtTime;
+    gmtime_s(&gmtTime, &now);
+    char buffer[128];
+    strftime(buffer, sizeof(buffer), "%a, %d %b %Y %H:%M:%S GMT", &gmtTime);
+    return buffer;
+}
+
+// Helper function to generate unique nonce
+std::string GenerateNonce()
+{
+    static std::atomic<uint64_t> counter = 0;
+    return FormatString("%llu-%llu", time(nullptr), counter.fetch_add(1));
+}
+
+// Helper function to create Aliyun API signature
+std::string CreateAliyunSignature(const std::string& accessKeySecret, const std::string& httpVerb,
+    const std::string& accept, const std::string& contentMd5, const std::string& contentType,
+    const std::string& date, const std::string& nonce, const std::string& resourcePath)
+{
+    // Build the string to sign according to Aliyun specification
+    std::string stringToSign = httpVerb + "\n" +
+        accept + "\n" +
+        contentMd5 + "\n" +
+        contentType + "\n" +
+        date + "\n" +
+        "x-acs-signature-method:HMAC-SHA1\n" +
+        "x-acs-signature-nonce:" + nonce + "\n" +
+        "x-acs-version:2019-01-02\n" +
+        resourcePath;
+
+    // Calculate HMAC-SHA1
+    std::string hmac = HmacSha1(accessKeySecret, stringToSign);
+
+    // Base64 encode the result
+    return Base64Encode(hmac);
+}
 
 std::pair<bool, std::wstring> Translate(const std::wstring &text, TranslationParam tlp) {
-    // CURL *curl = curl_easy_init();
-    if (tlp.authKey.empty() || tlp.translateVersion == L"free") {
+    if (tlp.translateVersion == L"free") {
+        // Free version using translate.alibaba.com
         static Synchronized<std::wstring> csrf;
         if (csrf->empty()) {
             if (HttpRequest httpRequest{
@@ -470,17 +508,21 @@ std::pair<bool, std::wstring> Translate(const std::wstring &text, TranslationPar
                 L"GET",
                 L"/api/translate/csrftoken"
             }) {
-                if (auto token = Copy(JSON::Parse(httpRequest.response)[L"token"].String())){
-                    csrf->assign(token.value());
-                // rapidjson::GenericDocument<rapidjson::UTF16<wchar_t> > jsonResponse;
-                // jsonResponse.Parse(httpRequest.response.c_str());
-                // if (jsonResponse.HasMember(L"token") && jsonResponse[L"token"].IsString()) {
-                //     csrf->assign(jsonResponse[L"token"].GetString());
-                } else {
-                    return {false, L"CSRF token not found"};
+                try {
+                    auto parsedJson = json::parse(WideStringToString(httpRequest.response));
+                    if (parsedJson.contains("token") && parsedJson["token"].is_string()) {
+                        csrf->assign(StringToWideString(parsedJson["token"].get<std::string>()));
+                    } else {
+                        return {false, L"CSRF token not found in response"};
+                    }
+                } catch (const json::exception& e) {
+                    return {false, FormatString(L"JSON parse error: %s", StringToWideString(e.what()))};
                 }
+            } else {
+                return {false, FormatString(L"%s (code=%u)", TRANSLATION_ERROR, httpRequest.errorCode)};
             }
         }
+
         if (HttpRequest httpRequest{
             L"Mozilla/5.0 Textractor",
             L"translate.alibaba.com",
@@ -489,19 +531,137 @@ std::pair<bool, std::wstring> Translate(const std::wstring &text, TranslationPar
             FormatString(R"(srcLang=%S&tgtLang=%S&domain=general&query=%s&_csrf=%s)",
                          codes.at(tlp.translateFrom),
                          codes.at(tlp.translateTo),
-                         WideStringToString(text),
+                         Escape(WideStringToString(text)),
                          WideStringToString(csrf.Copy())),
             L"Content-Type: application/x-www-form-urlencoded"
         }) {
-            if (auto translation = Copy(JSON::Parse(httpRequest.response)[L"data"][L"translateText"].String()))
-                return {true, HTML::Unescape(translation.value())};
-            return {false, FormatString(L"%s: %s", TRANSLATION_ERROR, httpRequest.response)};
+            try {
+                auto parsedJson = json::parse(WideStringToString(httpRequest.response));
+
+                if (parsedJson.contains("data") && parsedJson["data"].is_object() &&
+                    parsedJson["data"].contains("translateText") && parsedJson["data"]["translateText"].is_string()) {
+                    std::wstring translation = StringToWideString(parsedJson["data"]["translateText"].get<std::string>());
+                    return {true, HTML::Unescape(translation)};
+                }
+
+                return {false, FormatString(L"%s: %s", TRANSLATION_ERROR, httpRequest.response)};
+            } catch (const json::exception& e) {
+                return {false, FormatString(L"JSON parse error: %s", StringToWideString(e.what()))};
+            }
         }
         else return { false, FormatString(L"%s (code=%u)", TRANSLATION_ERROR, httpRequest.errorCode) };
-    } else if (tlp.translateVersion == L"pro") {
-        return {false, L"Pro version not implemented"};
-    } else {
-        // general
-        return {false, L"General version not implemented"};
+    }
+    else {
+        // Parse API key: format is "accessKeyId|accessKeySecret"
+        std::wstring authKey = tlp.authKey;
+        size_t splitPos = authKey.find(L'|');
+        if (splitPos == std::wstring::npos) {
+            return {false, L"Invalid API key format. Expected: accessKeyId|accessKeySecret"};
+        }
+
+        std::string accessKeyId = WideStringToString(authKey.substr(0, splitPos));
+        std::string accessKeySecret = WideStringToString(authKey.substr(splitPos + 1));
+
+        // Determine API endpoint
+        std::string apiPath;
+        if (tlp.translateVersion == L"pro") {
+            apiPath = "/api/translate/web/ecommerce";
+        } else {
+            apiPath = "/api/translate/web/general";
+        }
+
+        json requestJson;
+        requestJson["FormatType"] = "text";
+        requestJson["SourceLanguage"] = WideStringToString(codes.at(tlp.translateFrom));
+        requestJson["TargetLanguage"] = WideStringToString(codes.at(tlp.translateTo));
+        requestJson["SourceText"] = WideStringToString(text);
+        requestJson["Scene"] = "general";
+
+        std::string requestBody = requestJson.dump();
+
+        std::string md5Raw = Md5Raw(requestBody);
+        std::string contentMd5 = Base64Encode(md5Raw);
+
+        // Generate other required fields
+        std::string gmtTime = GetGMTTime();
+        std::string nonce = GenerateNonce();
+        std::string accept = "application/json";
+        std::string contentType = "application/json;charset=utf-8";
+
+        // Create signature
+        std::string signature = CreateAliyunSignature(
+            accessKeySecret,
+            "POST",
+            accept,
+            contentMd5,
+            contentType,
+            gmtTime,
+            nonce,
+            apiPath
+        );
+
+        // Build authorization header
+        std::string authorization = "acs " + accessKeyId + ":" + signature;
+
+        // Build headers
+        std::wstring headers = FormatString(
+            L"Accept: %S\r\n"
+            L"Content-Type: %S\r\n"
+            L"Content-MD5: %S\r\n"
+            L"Date: %S\r\n"
+            L"Authorization: %S\r\n"
+            L"x-acs-signature-method: HMAC-SHA1\r\n"
+            L"x-acs-signature-nonce: %S\r\n"
+            L"x-acs-version: 2019-01-02",
+            accept,
+            contentType,
+            contentMd5,
+            gmtTime,
+            authorization,
+            nonce
+        );
+
+        // Make the request
+        if (HttpRequest httpRequest{
+            L"AlibabaCloud API Workbench",
+            L"mt.cn-hangzhou.aliyuncs.com",
+            L"POST",
+            StringToWideString(apiPath).c_str(),
+            requestBody,
+            headers.c_str(),
+            INTERNET_DEFAULT_HTTP_PORT,
+            nullptr,
+            0
+        }) {
+            try {
+                auto parsedJson = json::parse(WideStringToString(httpRequest.response));
+
+                // Check for error
+                if (parsedJson.contains("errorCode")) {
+                    std::string errorCode = parsedJson["errorCode"].get<std::string>();
+                    std::string errorMsg;
+                    if (parsedJson.contains("errorMsg") && parsedJson["errorMsg"].is_string()) {
+                        errorMsg = parsedJson["errorMsg"].get<std::string>();
+                        return {false, FormatString(L"Aliyun API Error [%s]: %s",
+                            StringToWideString(errorCode), StringToWideString(errorMsg))};
+                    }
+                    return {false, FormatString(L"Aliyun API Error: %s", StringToWideString(errorCode))};
+                }
+
+                // Extract translation from response
+                if (parsedJson.contains("Data") && parsedJson["Data"].is_object() &&
+                    parsedJson["Data"].contains("Translated") && parsedJson["Data"]["Translated"].is_string()) {
+                    std::wstring translation = StringToWideString(parsedJson["Data"]["Translated"].get<std::string>());
+                    return {true, translation};
+                }
+
+                return {false, FormatString(L"%s: %s", TRANSLATION_ERROR, httpRequest.response)};
+            } catch (const json::exception& e) {
+                return {false, FormatString(L"JSON parse error: %s", StringToWideString(e.what()))};
+            }
+        }
+        else {
+            return { false, FormatString(L"%s (code=%u)", TRANSLATION_ERROR, httpRequest.errorCode) };
+        }
     }
 }

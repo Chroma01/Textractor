@@ -186,3 +186,130 @@ std::string HmacSha1(const std::string& key, const std::string& data)
 	return result;
 }
 
+std::string Sha256(const std::string& text)
+{
+	HCRYPTPROV provider = 0;
+	HCRYPTHASH hash = 0;
+	BYTE digest[32] = {}; // SHA256 produces 32 bytes
+	DWORD digestSize = sizeof(digest);
+	std::string result;
+
+	auto cleanup = [&]
+	{
+		if (hash) CryptDestroyHash(hash);
+		if (provider) CryptReleaseContext(provider, 0);
+	};
+
+	if (!CryptAcquireContextW(&provider, nullptr, nullptr, PROV_RSA_AES, CRYPT_VERIFYCONTEXT)) return result;
+	if (!CryptCreateHash(provider, CALG_SHA_256, 0, 0, &hash))
+	{
+		cleanup();
+		return result;
+	}
+	if (!CryptHashData(hash, reinterpret_cast<const BYTE*>(text.data()), static_cast<DWORD>(text.size()), 0))
+	{
+		cleanup();
+		return result;
+	}
+	if (!CryptGetHashParam(hash, HP_HASHVAL, digest, &digestSize, 0))
+	{
+		cleanup();
+		return result;
+	}
+	cleanup();
+
+	// Convert to lowercase hex string
+	constexpr char hex[] = "0123456789abcdef";
+	result.reserve(digestSize * 2);
+	for (DWORD i = 0; i < digestSize; ++i)
+	{
+		result.push_back(hex[digest[i] >> 4]);
+		result.push_back(hex[digest[i] & 0x0F]);
+	}
+	return result;
+}
+
+std::string HmacSha256(const std::string& key, const std::string& data)
+{
+	HCRYPTPROV provider = 0;
+	HCRYPTHASH hash = 0;
+	HCRYPTKEY cryptKey = 0;
+	BYTE digest[32] = {}; // SHA256 produces 32 bytes
+	DWORD digestSize = sizeof(digest);
+	std::string result;
+
+	auto cleanup = [&]
+	{
+		if (hash) CryptDestroyHash(hash);
+		if (cryptKey) CryptDestroyKey(cryptKey);
+		if (provider) CryptReleaseContext(provider, 0);
+	};
+
+	if (!CryptAcquireContextW(&provider, nullptr, nullptr, PROV_RSA_AES, CRYPT_VERIFYCONTEXT))
+	{
+		return result;
+	}
+
+	// Create HMAC key structure
+	struct {
+		BLOBHEADER header;
+		DWORD keySize;
+		BYTE keyData[1]; // Variable length
+	} *keyBlob = nullptr;
+
+	DWORD blobSize = sizeof(BLOBHEADER) + sizeof(DWORD) + key.size();
+	keyBlob = (decltype(keyBlob))malloc(blobSize);
+	if (!keyBlob)
+	{
+		cleanup();
+		return result;
+	}
+
+	keyBlob->header.bType = PLAINTEXTKEYBLOB;
+	keyBlob->header.bVersion = CUR_BLOB_VERSION;
+	keyBlob->header.reserved = 0;
+	keyBlob->header.aiKeyAlg = CALG_RC2;
+	keyBlob->keySize = static_cast<DWORD>(key.size());
+	memcpy(keyBlob->keyData, key.data(), key.size());
+
+	if (!CryptImportKey(provider, (BYTE*)keyBlob, blobSize, 0, CRYPT_IPSEC_HMAC_KEY, &cryptKey))
+	{
+		free(keyBlob);
+		cleanup();
+		return result;
+	}
+	free(keyBlob);
+
+	if (!CryptCreateHash(provider, CALG_HMAC, cryptKey, 0, &hash))
+	{
+		cleanup();
+		return result;
+	}
+
+	// Set HMAC algorithm to SHA256
+	HMAC_INFO hmacInfo = {};
+	hmacInfo.HashAlgid = CALG_SHA_256;
+	if (!CryptSetHashParam(hash, HP_HMAC_INFO, (BYTE*)&hmacInfo, 0))
+	{
+		cleanup();
+		return result;
+	}
+
+	if (!CryptHashData(hash, reinterpret_cast<const BYTE*>(data.data()), static_cast<DWORD>(data.size()), 0))
+	{
+		cleanup();
+		return result;
+	}
+
+	if (!CryptGetHashParam(hash, HP_HASHVAL, digest, &digestSize, 0))
+	{
+		cleanup();
+		return result;
+	}
+
+	cleanup();
+
+	// Return raw bytes as string
+	result.assign(reinterpret_cast<char*>(digest), digestSize);
+	return result;
+}

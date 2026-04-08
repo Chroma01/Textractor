@@ -82,7 +82,8 @@ public:
 		display->addRow(TRANSLATE_TO, translateToCombo);
 		connect(translateToCombo, &QComboBox::currentTextChanged, this, &Window::SaveTranslateTo);
 		auto translateFromCombo = new QComboBox(this);
-		translateFromCombo->addItem("?");
+		if (strcmp(TRANSLATION_PROVIDER, "Tencent Translate") != 0)
+			translateFromCombo->addItem("?");
 		translateFromCombo->addItems(languagesFrom);
 		i = -1;
 		if (settings.contains(TRANSLATE_FROM)) i = translateFromCombo->findText(settings.value(TRANSLATE_FROM).toString());
@@ -224,10 +225,10 @@ bool ProcessSentence(std::wstring &sentence, SentenceInfo sentenceInfo) {
 extern const std::unordered_map<std::wstring, std::wstring> codes;
 TEST(
 	{
-		assert(Translate(L"こんにちは", { L"English", L"?", L"" }).second.find(L"ello") == 1 || strstr(TRANSLATION_PROVIDER, "DevTools"));
-
+		if (strcmp(TRANSLATION_PROVIDER, "Tencent Translate") != 0)
+			assert(Translate(L"こんにちは", { L"English", L"?", L"" }).second.find(L"ello") == 1 || strstr(TRANSLATION_PROVIDER, "DevTools"));
 		for (auto languages : { languagesFrom, languagesTo }) for (auto language : languages)
 			assert(codes.count(S(language)));
-		assert(codes.count(L"?"));
-	}
+		if (strcmp(TRANSLATION_PROVIDER, "Tencent Translate") != 0)
+			assert(codes.count(L"?"));	}
 );

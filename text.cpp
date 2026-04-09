@@ -25,6 +25,7 @@ const char* LAUNCH = u8"Launch game";
 const char* CONFIG = u8"Configure game";
 const char* DETACH = u8"Detach from game";
 const char* FORGET = u8"Forget game";
+const char* RESTART_AS_ADMIN = u8"Restart as Admin";
 const char* ADD_HOOK = u8"Add hook";
 const char* REMOVE_HOOKS = u8"Remove hook(s)";
 const char* SAVE_HOOKS = u8"Save hook(s)";

@@ -24,6 +24,7 @@ extern const char* LAUNCH;
 extern const char* CONFIG;
 extern const char* DETACH;
 extern const char* FORGET;
+extern const char* RESTART_AS_ADMIN;
 extern const char* ADD_HOOK;
 extern const char* REMOVE_HOOKS;
 extern const char* SAVE_HOOKS;
@@ -95,6 +96,38 @@ namespace
 	MainWindow* This = nullptr;
 
 	void FindHooks();
+
+	bool IsRunningAsAdmin()
+	{
+		BOOL isAdmin = FALSE;
+		PSID administratorsGroup = nullptr;
+		SID_IDENTIFIER_AUTHORITY ntAuthority = SECURITY_NT_AUTHORITY;
+
+		if (AllocateAndInitializeSid(&ntAuthority, 2, SECURITY_BUILTIN_DOMAIN_RID,
+			DOMAIN_ALIAS_RID_ADMINS, 0, 0, 0, 0, 0, 0, &administratorsGroup))
+		{
+			CheckTokenMembership(nullptr, administratorsGroup, &isAdmin);
+			FreeSid(administratorsGroup);
+		}
+		return isAdmin != FALSE;
+	}
+
+	void RestartAsAdmin()
+	{
+		wchar_t exePath[MAX_PATH];
+		GetModuleFileNameW(nullptr, exePath, MAX_PATH);
+
+		SHELLEXECUTEINFOW sei = { sizeof(sei) };
+		sei.lpVerb = L"runas";
+		sei.lpFile = exePath;
+		sei.hwnd = nullptr;
+		sei.nShow = SW_NORMAL;
+
+		if (ShellExecuteExW(&sei))
+		{
+			QApplication::quit();
+		}
+	}
 
 	QString TextThreadString(TextThread& thread)
 	{
@@ -774,6 +807,14 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 		connect(button, &QPushButton::clicked, slot);
 		ui.processLayout->addWidget(button);
 	}
+
+	{
+		auto restartButton = new QPushButton(RESTART_AS_ADMIN, ui.processFrame);
+		restartButton->setEnabled(!IsRunningAsAdmin());
+		connect(restartButton, &QPushButton::clicked, RestartAsAdmin);
+		ui.processLayout->addWidget(restartButton);
+	}
+
 	ui.processLayout->addItem(new QSpacerItem(0, 0, QSizePolicy::Minimum, QSizePolicy::Expanding));
 
 	connect(ui.processCombo, qOverload<int>(&QComboBox::currentIndexChanged), [] { selectedProcessId = ui.processCombo->currentText().split(":")[0].toULong(nullptr, 16); });

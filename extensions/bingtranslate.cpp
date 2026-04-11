@@ -3,6 +3,8 @@
 #include "network.h"
 
 extern const wchar_t* TRANSLATION_ERROR;
+extern const wchar_t* BING_TOKEN_NOT_FOUND;
+extern const wchar_t* BING_COULD_NOT_ACQUIRE_TOKEN;
 
 const char* TRANSLATION_PROVIDER = "Bing Translate";
 const char* GET_API_KEY_FROM = "https://www.microsoft.com/en-us/translator/business/trial/#get-started";
@@ -318,9 +320,9 @@ std::pair<bool, std::wstring> Translate(const std::wstring& text, TranslationPar
 		if (auto tokenPos = httpRequest.response.find(L"data-iid=\""); tokenPos != std::string::npos)
 			tokenBuilder += L"&IID=" + httpRequest.response.substr(tokenPos + 10, 15);
 		if (!tokenBuilder.empty()) token->assign(tokenBuilder);
-		else return { false, FormatString(L"%s: %s\ntoken not found", TRANSLATION_ERROR, httpRequest.response) };
+		else return { false, FormatString(L"%s: %s\n%s", TRANSLATION_ERROR, httpRequest.response, BING_TOKEN_NOT_FOUND) };
 	}
-	else return { false, FormatString(L"%s: could not acquire token", TRANSLATION_ERROR) };
+	else return { false, FormatString(L"%s: %s", TRANSLATION_ERROR, BING_COULD_NOT_ACQUIRE_TOKEN) };
 
 	if (HttpRequest httpRequest{
 		L"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Textractor",

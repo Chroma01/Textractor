@@ -23,18 +23,10 @@
       <widget class="QLineEdit" name="processEdit"/>
      </item>
      <item>
-      <widget class="QCheckBox" name="filterArchitectureCheckbox">
-       <property name="text">
-        <string>Hide incompatible architecture</string>
-       </property>
-      </widget>
+      <widget class="QCheckBox" name="filterArchitectureCheckbox"/>
      </item>
      <item>
-      <widget class="QPushButton" name="refreshButton">
-       <property name="text">
-        <string>Refresh</string>
-       </property>
-      </widget>
+      <widget class="QPushButton" name="refreshButton"/>
      </item>
     </layout>
    </item>

@@ -6,6 +6,12 @@
 using json = nlohmann::json;
 
 extern const wchar_t *TRANSLATION_ERROR;
+extern const wchar_t* TRANSLATION_EMPTY_RESPONSE;
+extern const wchar_t* TRANSLATION_UNEXPECTED_STRUCTURE;
+extern const wchar_t* TRANSLATION_KEY_ERROR;
+extern const wchar_t* TRANSLATION_EXCEPTION_OCCURRED;
+extern const wchar_t* TRANSLATION_UNKNOWN_ERROR;
+extern const wchar_t* TRANSLATION_RETRY_LIMIT_REACHED;
 
 const char *TRANSLATION_PROVIDER = "Google Translate";
 const char *GET_API_KEY_FROM = "https://console.cloud.google.com/marketplace/product/google/translate.googleapis.com";
@@ -469,7 +475,7 @@ std::pair<bool, std::wstring> Translate(const std::wstring &text, TranslationPar
                 L"Host: translate-pa.googleapis.com\r\nX-Goog-API-Key: AIzaSyATBXajvzQLTDHEQbcpq0Ihe0vWDHmO520\r\nContent-Type: application/json+protobuf"
             }) {
                 if (httpRequest.response.empty()) {
-                    lastError = L"Empty response from translation API";
+                    lastError = TRANSLATION_EMPTY_RESPONSE;
                     continue;
                 }
 
@@ -478,7 +484,7 @@ std::pair<bool, std::wstring> Translate(const std::wstring &text, TranslationPar
                     if (!parsedJson.is_array() || parsedJson.empty() ||
                         !parsedJson[0].is_array() || parsedJson[0].empty() ||
                         !parsedJson[0][0].is_string()) {
-                        lastError = L"Unexpected JSON response structure";
+                        lastError = TRANSLATION_UNEXPECTED_STRUCTURE;
                         continue;
                     }
 
@@ -496,14 +502,14 @@ std::pair<bool, std::wstring> Translate(const std::wstring &text, TranslationPar
             }
         }
 
-        return {false, lastError.empty() ? FormatString(L"%s: retry limit reached", TRANSLATION_ERROR) : lastError};
+        return {false, lastError.empty() ? FormatString(L"%s: %s", TRANSLATION_ERROR, TRANSLATION_RETRY_LIMIT_REACHED) : lastError};
     } catch (const std::out_of_range &e) {
-        return {false, FormatString(L"Key error in translation map: %s", StringToWideString(e.what()).c_str())};
+        return {false, FormatString(L"%s: %s", TRANSLATION_KEY_ERROR, StringToWideString(e.what()).c_str())};
     }
     catch (const std::exception &e) {
-        return {false, FormatString(L"Exception occurred: %s", StringToWideString(e.what()).c_str())};
+        return {false, FormatString(L"%s: %s", TRANSLATION_EXCEPTION_OCCURRED, StringToWideString(e.what()).c_str())};
     }
     catch (...) {
-        return {false, L"Unknown error occurred during translation"};
+        return {false, TRANSLATION_UNKNOWN_ERROR};
     }
 }

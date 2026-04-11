@@ -30,7 +30,7 @@ extern const QStringList languagesTo, languagesFrom, version;
 extern bool translateSelectedOnly, useRateLimiter, rateLimitSelected, useCache, useFilter;
 extern int tokenCount, rateLimitTimespan, maxSentenceSize;
 
-const char* TRANSLATE_VERSION = u8"Version";
+extern const char* TRANSLATE_EDITON;
 
 std::pair<bool, std::wstring> Translate(const std::wstring& text, TranslationParam tlp);
 
@@ -101,11 +101,11 @@ public:
 		auto translateVersionCombo = new QComboBox(this);
 		translateVersionCombo->addItems(version);
 		i = -1;
-		if (settings.contains(TRANSLATE_VERSION)) i = translateVersionCombo->findText(settings.value(TRANSLATE_VERSION).toString());
+		if (settings.contains(TRANSLATE_EDITON)) i = translateVersionCombo->findText(settings.value(TRANSLATE_EDITON).toString());
 		if (i < 0) i = 0;
 		translateVersionCombo->setCurrentIndex(i);
 		SaveTranslateVersion(translateVersionCombo->currentText());
-		display->addRow(TRANSLATE_VERSION, translateVersionCombo);
+		display->addRow(TRANSLATE_EDITON, translateVersionCombo);
 		connect(translateVersionCombo, &QComboBox::currentTextChanged, this, &Window::SaveTranslateVersion);
 
 		for (auto [value, label] : Array<bool&, const char*>{
@@ -167,7 +167,7 @@ private:
 	}
 	void SaveTranslateVersion(QString version)
 	{
-		settings.setValue(TRANSLATE_VERSION, S(tlp->translateVersion = S(version)));
+		settings.setValue(TRANSLATE_EDITON, S(tlp->translateVersion = S(version)));
 	}
 } window;
 

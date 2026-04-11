@@ -29,8 +29,7 @@ extern const char* GET_API_KEY_FROM;
 extern const QStringList languagesTo, languagesFrom, version;
 extern bool translateSelectedOnly, useRateLimiter, rateLimitSelected, useCache, useFilter;
 extern int tokenCount, rateLimitTimespan, maxSentenceSize, port;
-
-const char* TRANSLATE_VERSION = u8"Version";
+extern const char* TRANSLATE_VERSION;
 
 std::pair<bool, std::wstring> Translate(const std::wstring& text, TranslationParam tlp);
 

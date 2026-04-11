@@ -6,6 +6,12 @@
 using json = nlohmann::json;
 
 extern const wchar_t *TRANSLATION_ERROR;
+extern const wchar_t* LINGOCLOUD_AUTH_PROMPT;
+extern const wchar_t* TRANSLATION_NO_TRANSLATION_FOUND;
+extern const wchar_t* TRANSLATION_JSON_PARSE_ERROR;
+extern const wchar_t* TRANSLATION_KEY_ERROR;
+extern const wchar_t* TRANSLATION_EXCEPTION_OCCURRED;
+extern const wchar_t* TRANSLATION_UNKNOWN_ERROR;
 
 const char *TRANSLATION_PROVIDER = "Lingocloud Translate";
 const char *GET_API_KEY_FROM = "https://docs.caiyunapp.com/lingocloud-api/index.html";
@@ -59,8 +65,6 @@ int tokenCount = 10, rateLimitTimespan = 1000, maxSentenceSize = 1000;
 
 namespace
 {
-	constexpr auto LINGOCLOUD_AUTH_PROMPT = L"Please fill in the API token for Lingocloud Translation in the API key field";
-
 	std::wstring BuildTransType(const std::wstring& from, const std::wstring& to)
 	{
 		// Build trans_type like "en2zh", "ja2zh", "auto2zh", etc.
@@ -139,16 +143,16 @@ std::pair<bool, std::wstring> Translate(const std::wstring &text, TranslationPar
 			}
 			catch (const json::exception& e)
 			{
-				return { false, FormatString(L"%s: JSON parse error: %s", TRANSLATION_ERROR, StringToWideString(e.what()).c_str()) };
+				return { false, FormatString(L"%s: %s: %s", TRANSLATION_ERROR, TRANSLATION_JSON_PARSE_ERROR, StringToWideString(e.what()).c_str()) };
 			}
 		} else return { false, FormatString(L"%s (code=%lu)", TRANSLATION_ERROR, httpRequest.errorCode) };
 	} catch (const std::out_of_range &e) {
-		return {false, FormatString(L"Key error in translation map: %s", StringToWideString(e.what()).c_str())};
+		return {false, FormatString(L"%s: %s", TRANSLATION_KEY_ERROR, StringToWideString(e.what()).c_str())};
 	}
 	catch (const std::exception &e) {
-		return {false, FormatString(L"Exception occurred: %s", StringToWideString(e.what()).c_str())};
+		return {false, FormatString(L"%s: %s", TRANSLATION_EXCEPTION_OCCURRED, StringToWideString(e.what()).c_str())};
 	}
 	catch (...) {
-		return {false, L"Unknown error occurred during translation"};
+		return {false, TRANSLATION_UNKNOWN_ERROR};
 	}
 }

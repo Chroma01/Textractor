@@ -3,6 +3,8 @@
 #include "network.h"
 
 extern const wchar_t* TRANSLATION_ERROR;
+extern const wchar_t* BING_TOKEN_RESPONSE_EMPTY;
+extern const wchar_t* BING_COULD_NOT_ACQUIRE_TOKEN;
 
 const char* TRANSLATION_PROVIDER = "Bing Translate2";
 const char* GET_API_KEY_FROM = "https://www.microsoft.com/en-us/translator/business/trial/#get-started";
@@ -321,11 +323,11 @@ std::pair<bool, std::wstring> Translate(const std::wstring& text, TranslationPar
 			tokenFetchTime = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
 		}
 		else {
-			return { false, FormatString(L"%s: token response is empty", TRANSLATION_ERROR) };
+			return { false, FormatString(L"%s: %s", TRANSLATION_ERROR, BING_TOKEN_RESPONSE_EMPTY) };
 		}
 	}
 	else {
-		return { false, FormatString(L"%s: could not acquire token", TRANSLATION_ERROR) };
+		return { false, FormatString(L"%s: %s", TRANSLATION_ERROR, BING_COULD_NOT_ACQUIRE_TOKEN) };
 	}
 
 	std::wstring translateFromComponent = tlp.translateFrom == L"?" ? L"" : L"&from=" + codes.at(tlp.translateFrom);

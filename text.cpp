@@ -16,7 +16,11 @@ enum class Language
 	THAI = 7,
 	KOREAN = 8,
 	FRENCH = 9,
-	TURKISH = 10
+	TURKISH = 10,
+	TRADITIONAL_CHINESE = 11,
+	JAPANESE = 12,
+	GERMAN = 13,
+	VIETNAMESE = 14
 };
 
 Language CURRENT_LANGUAGE = Language::ENGLISH;
@@ -33,7 +37,11 @@ const char* LANGUAGE_NAMES[] = {
 	"ไทย",
 	"한국어",
 	"Français",
-	"Türkçe"
+	"Türkçe",
+	"繁體中文",
+	"日本語",
+	"Deutsch",
+	"Tiếng Việt"
 };
 
 extern const int LANGUAGE_COUNT = sizeof(LANGUAGE_NAMES) / sizeof(LANGUAGE_NAMES[0]);
@@ -56,6 +64,8 @@ const char* EXTENSIONS = u8"Extensions";
 const char* SELECT_PROCESS = u8"Select process";
 const char* ATTACH_INFO = u8R"(If you don't see the process you want to attach, try running with admin rights
 You can also type in the process ID)";
+const char* REFRESH = u8"Refresh";
+const char* HIDE_INCOMPATIBLE_ARCHITECTURE = u8"Hide incompatible architecture";
 const char* SELECT_PROCESS_INFO = u8"If you manually type in the process file name, use the absolute path";
 const char* FROM_COMPUTER = u8"Select from computer";
 const char* PROCESSES = u8"Processes (*.exe)";
@@ -160,6 +170,10 @@ const char* HIJACK_ERROR = u8"Textractor: Hijack ERROR";
 const char* COULD_NOT_FIND = u8"Textractor: could not find text";
 const char* TRANSLATE_TO = u8"Translate to";
 const char* TRANSLATE_FROM = u8"Translate from";
+const char* CONFIGURE_TRANSLATION_SETTINGS = u8"Please configure the source/target language and API key in the external translation program.";
+const char* PORT = u8"Port";
+const char* TRANSLATE_VERSION = u8"Version";
+const char* TRANSLATE_EDITON = u8"Translation Edition";
 const char* FILTER_GARBAGE = u8"Filter garbage characters";
 const char* TRANSLATE_SELECTED_THREAD_ONLY = u8"Translate selected text thread only";
 const char* RATE_LIMIT_ALL_THREADS = u8"Use rate limiter";
@@ -272,6 +286,52 @@ const char* THREAD_LINK_TO = u8"Thread number to link to";
 const char* HEXADECIMAL = u8"Hexadecimal";
 const char* LANGUAGE_SETTING = u8"Language (requires restart)";
 const char* LANGUAGE_RESTART_NOTICE = u8"Language change will take effect after restarting Textractor";
+const char* CHECK_UPDATE = u8"Check for texthook updates on startup";
+const char* ORIGINAL_FONT = u8"OriginalFont";
+const char* TRANSLATED_FONT = u8"TranslatedFont";
+const wchar_t* WINHTTP_TIMEOUT = L"request timed out";
+const wchar_t* WINHTTP_NAME_NOT_RESOLVED = L"DNS resolve failed";
+const wchar_t* WINHTTP_CANNOT_CONNECT = L"cannot connect to server";
+const wchar_t* WINHTTP_CONNECTION_ERROR = L"connection dropped";
+const wchar_t* WINHTTP_SECURE_FAILURE = L"TLS/SSL handshake failed";
+const wchar_t* WINHTTP_INVALID_SERVER_RESPONSE = L"invalid server response";
+const wchar_t* WINHTTP_OPERATION_CANCELLED = L"request cancelled";
+const wchar_t* UNKNOWN_ERROR = L"unknown error";
+const wchar_t* CHECKING_UPDATE = L"Checking for updates...";
+const wchar_t* OPEN_TEXTHOOK_FAILED = L"Failed to open texthook.dll.";
+const wchar_t* CHECK_UPDATE_FAILED = L"Update check failed: %s";
+const wchar_t* CHECK_UPDATE_FAILED_CODE = L"Update check failed: %s (code=%u).";
+const wchar_t* CHECK_UPDATE_FAILED_HTTP = L"Update check failed: HTTP status %u.";
+const wchar_t* CHECK_UPDATE_FAILED_EMPTY_RESPONSE = L"Update check failed: empty server response.";
+const wchar_t* CHECK_UPDATE_FAILED_MALFORMED_RESPONSE = L"Update check failed: malformed JSON response.";
+const wchar_t* CHECK_UPDATE_FAILED_UNKNOWN = L"Update check failed: server returned an unknown error.";
+const wchar_t* CHECK_UPDATE_FAILED_UNEXPECTED_RESPONSE = L"Unexpected response from update server.\nTry visiting the update server in an external browser to see what's happening: https://api.iloli.one";
+const wchar_t* TEXTHOOK_UPDATE_AVAILABLE = L"Texthook update found!\nCurrent: %s, New: %s\nDownload: %s";
+const wchar_t* TEXTHOOK_IS_LATEST = L"Texthook is up to date.";
+const wchar_t* TENCENT_AUTH_PROMPT = L"Please fill in the SecretId|SecretKey for Tencent Cloud Translation in the API key field";
+const wchar_t* LINGOCLOUD_AUTH_PROMPT = L"Please fill in the API token for Lingocloud Translation in the API key field";
+const wchar_t* TRANSLATION_NO_TRANSLATION_FOUND = L"No translation found in response";
+const wchar_t* TRANSLATION_JSON_PARSE_ERROR = L"JSON parse error";
+const wchar_t* TRANSLATION_KEY_ERROR = L"Key error in translation map";
+const wchar_t* TRANSLATION_EXCEPTION_OCCURRED = L"Exception occurred";
+const wchar_t* TRANSLATION_UNKNOWN_ERROR = L"Unknown error occurred during translation";
+const wchar_t* TRANSLATION_EMPTY_RESPONSE = L"Empty response from translation API";
+const wchar_t* TRANSLATION_RESPONSE_PARSE_DATA_EMPTY = L"Empty data line after parsing response";
+const wchar_t* TRANSLATION_INVALID_JSON_FORMAT = L"Invalid JSON response format";
+const wchar_t* TRANSLATION_UNEXPECTED_STRUCTURE = L"Unexpected response structure";
+const wchar_t* TRANSLATION_INVALID_DATA_STRUCTURE = L"Invalid translation data structure";
+const wchar_t* TRANSLATION_EMPTY_ARRAY = L"Empty translation array";
+const wchar_t* TRANSLATION_INVALID_ENTRY = L"Invalid translation entry";
+const wchar_t* TRANSLATION_EMPTY_SEGMENTS = L"Empty translation segments";
+const wchar_t* TRANSLATION_NO_TEXT_IN_SEGMENTS = L"No translation text found in segments";
+const wchar_t* TRANSLATION_RETRY_LIMIT_REACHED = L"retry limit reached";
+const wchar_t* ALIYUN_CSRF_TOKEN_NOT_FOUND = L"CSRF token not found in response";
+const wchar_t* ALIYUN_INVALID_API_KEY_FORMAT = L"Invalid API key format. Expected: accessKeyId|accessKeySecret";
+const wchar_t* ALIYUN_API_ERROR = L"Aliyun API Error";
+const wchar_t* BING_TOKEN_RESPONSE_EMPTY = L"token response is empty";
+const wchar_t* BING_COULD_NOT_ACQUIRE_TOKEN = L"could not acquire token";
+const wchar_t* BING_TOKEN_NOT_FOUND = L"token not found";
+const wchar_t* BAIDU_MD5_SIGNATURE_FAILED = L"MD5 signature generation failed.";
 
 void Localize()
 {
@@ -306,6 +366,18 @@ void Localize()
 			break;
 		case Language::TURKISH:
 			#include "languages/turkish.cpp"
+			break;
+		case Language::TRADITIONAL_CHINESE:
+			#include "languages/tchinese.cpp"
+			break;
+		case Language::JAPANESE:
+			#include "languages/japanese.cpp"
+			break;
+		case Language::GERMAN:
+			#include "languages/german.cpp"
+			break;
+		case Language::VIETNAMESE:
+			#include "languages/vietnamese.cpp"
 			break;
 		case Language::ENGLISH:
 		default:

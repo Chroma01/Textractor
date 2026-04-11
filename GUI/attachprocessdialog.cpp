@@ -3,6 +3,8 @@
 
 extern const char* SELECT_PROCESS;
 extern const char* ATTACH_INFO;
+extern const char* REFRESH;
+extern const char* HIDE_INCOMPATIBLE_ARCHITECTURE;
 
 ProcessInfo::ProcessInfo() : processId(0), is64Bit(false) {}
 
@@ -38,6 +40,8 @@ AttachProcessDialog::AttachProcessDialog(QWidget* parent, std::vector<ProcessInf
 	ui.setupUi(this);
 	setWindowTitle(SELECT_PROCESS);
 	ui.label->setText(ATTACH_INFO);
+	ui.refreshButton->setText(REFRESH);
+	ui.filterArchitectureCheckbox->setText(HIDE_INCOMPATIBLE_ARCHITECTURE);
 	ui.processList->setModel(&model);
 
 	populateProcessList();

@@ -7,6 +7,10 @@
 using json = nlohmann::json;
 
 extern const wchar_t *TRANSLATION_ERROR;
+extern const wchar_t* BAIDU_MD5_SIGNATURE_FAILED;
+extern const wchar_t* TRANSLATION_KEY_ERROR;
+extern const wchar_t* TRANSLATION_EXCEPTION_OCCURRED;
+extern const wchar_t* TRANSLATION_UNKNOWN_ERROR;
 
 // 用百度翻译翻H文会不会封号?
 
@@ -122,7 +126,7 @@ std::pair<bool, std::wstring> Translate(const std::wstring &text, TranslationPar
 		std::string appKey = WideStringToString(credentials->appKey);
 		std::string salt = FormatString("%llu%lu", GetTickCount64(), GetCurrentThreadId());
 		std::string sign = Md5(appId + query + salt + appKey);
-		if (sign.empty()) return { false, L"MD5 signature generation failed." };
+		if (sign.empty()) return { false, BAIDU_MD5_SIGNATURE_FAILED };
 
 		std::string body = FormatString(
 			"q=%s&from=%s&to=%s&appid=%s&salt=%s&sign=%s",
@@ -178,12 +182,12 @@ std::pair<bool, std::wstring> Translate(const std::wstring &text, TranslationPar
 			}
 		} else return { false, FormatString(L"%s (code=%lu)", TRANSLATION_ERROR, httpRequest.errorCode) };
 	} catch (const std::out_of_range &e) {
-		return {false, FormatString(L"Key error in translation map: %s", StringToWideString(e.what()).c_str())};
+		return {false, FormatString(L"%s: %s", TRANSLATION_KEY_ERROR, StringToWideString(e.what()).c_str())};
 	}
 	catch (const std::exception &e) {
-		return {false, FormatString(L"Exception occurred: %s", StringToWideString(e.what()).c_str())};
+		return {false, FormatString(L"%s: %s", TRANSLATION_EXCEPTION_OCCURRED, StringToWideString(e.what()).c_str())};
 	}
 	catch (...) {
-		return {false, L"Unknown error occurred during translation"};
+		return {false, TRANSLATION_UNKNOWN_ERROR};
 	}
 }

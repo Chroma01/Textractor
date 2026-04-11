@@ -9,6 +9,10 @@
 using json = nlohmann::json;
 
 extern const wchar_t *TRANSLATION_ERROR;
+extern const wchar_t* TRANSLATION_JSON_PARSE_ERROR;
+extern const wchar_t* ALIYUN_CSRF_TOKEN_NOT_FOUND;
+extern const wchar_t* ALIYUN_INVALID_API_KEY_FORMAT;
+extern const wchar_t* ALIYUN_API_ERROR;
 
 const char *TRANSLATION_PROVIDER = "Aliyun Translate";
 const char *GET_API_KEY_FROM =
@@ -513,10 +517,10 @@ std::pair<bool, std::wstring> Translate(const std::wstring &text, TranslationPar
                     if (parsedJson.contains("token") && parsedJson["token"].is_string()) {
                         csrf->assign(StringToWideString(parsedJson["token"].get<std::string>()));
                     } else {
-                        return {false, L"CSRF token not found in response"};
+                        return {false, ALIYUN_CSRF_TOKEN_NOT_FOUND};
                     }
                 } catch (const json::exception& e) {
-                    return {false, FormatString(L"JSON parse error: %s", StringToWideString(e.what()))};
+                    return {false, FormatString(L"%s: %s", TRANSLATION_JSON_PARSE_ERROR, StringToWideString(e.what()))};
                 }
             } else {
                 return {false, FormatString(L"%s (code=%u)", TRANSLATION_ERROR, httpRequest.errorCode)};
@@ -546,7 +550,7 @@ std::pair<bool, std::wstring> Translate(const std::wstring &text, TranslationPar
 
                 return {false, FormatString(L"%s: %s", TRANSLATION_ERROR, httpRequest.response)};
             } catch (const json::exception& e) {
-                return {false, FormatString(L"JSON parse error: %s", StringToWideString(e.what()))};
+                return {false, FormatString(L"%s: %s", TRANSLATION_JSON_PARSE_ERROR, StringToWideString(e.what()))};
             }
         }
         else return { false, FormatString(L"%s (code=%u)", TRANSLATION_ERROR, httpRequest.errorCode) };
@@ -556,7 +560,7 @@ std::pair<bool, std::wstring> Translate(const std::wstring &text, TranslationPar
         std::wstring authKey = tlp.authKey;
         size_t splitPos = authKey.find(L'|');
         if (splitPos == std::wstring::npos) {
-            return {false, L"Invalid API key format. Expected: accessKeyId|accessKeySecret"};
+            return {false, ALIYUN_INVALID_API_KEY_FORMAT};
         }
 
         std::string accessKeyId = WideStringToString(authKey.substr(0, splitPos));
@@ -642,10 +646,10 @@ std::pair<bool, std::wstring> Translate(const std::wstring &text, TranslationPar
                     std::string errorMsg;
                     if (parsedJson.contains("errorMsg") && parsedJson["errorMsg"].is_string()) {
                         errorMsg = parsedJson["errorMsg"].get<std::string>();
-                        return {false, FormatString(L"Aliyun API Error [%s]: %s",
-                            StringToWideString(errorCode), StringToWideString(errorMsg))};
+                        return {false, FormatString(L"%s [%s]: %s",
+                            ALIYUN_API_ERROR, StringToWideString(errorCode), StringToWideString(errorMsg))};
                     }
-                    return {false, FormatString(L"Aliyun API Error: %s", StringToWideString(errorCode))};
+                    return {false, FormatString(L"%s: %s", ALIYUN_API_ERROR, StringToWideString(errorCode))};
                 }
 
                 // Extract translation from response
@@ -657,7 +661,7 @@ std::pair<bool, std::wstring> Translate(const std::wstring &text, TranslationPar
 
                 return {false, FormatString(L"%s: %s", TRANSLATION_ERROR, httpRequest.response)};
             } catch (const json::exception& e) {
-                return {false, FormatString(L"JSON parse error: %s", StringToWideString(e.what()))};
+                return {false, FormatString(L"%s: %s", TRANSLATION_JSON_PARSE_ERROR, StringToWideString(e.what()))};
             }
         }
         else {

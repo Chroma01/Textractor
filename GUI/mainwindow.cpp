@@ -70,10 +70,30 @@ extern const char* MAX_BUFFER_SIZE;
 extern const char* MAX_HISTORY_SIZE;
 extern const char* LIMIT_STRING_LENGTH;
 extern const char* CONFIG_JP_LOCALE;
+extern const char* CHECK_UPDATE;
 extern const wchar_t* ABOUT;
 extern const wchar_t* CL_OPTIONS;
 extern const wchar_t* LAUNCH_FAILED;
 extern const wchar_t* INVALID_CODE;
+extern const wchar_t* WINHTTP_TIMEOUT;
+extern const wchar_t* WINHTTP_NAME_NOT_RESOLVED;
+extern const wchar_t* WINHTTP_CANNOT_CONNECT;
+extern const wchar_t* WINHTTP_CONNECTION_ERROR;
+extern const wchar_t* WINHTTP_SECURE_FAILURE;
+extern const wchar_t* WINHTTP_INVALID_SERVER_RESPONSE;
+extern const wchar_t* WINHTTP_OPERATION_CANCELLED;
+extern const wchar_t* UNKNOWN_ERROR;
+extern const wchar_t* CHECKING_UPDATE;
+extern const wchar_t* OPEN_TEXTHOOK_FAILED;
+extern const wchar_t* CHECK_UPDATE_FAILED;
+extern const wchar_t* CHECK_UPDATE_FAILED_CODE;
+extern const wchar_t* CHECK_UPDATE_FAILED_HTTP;
+extern const wchar_t* CHECK_UPDATE_FAILED_EMPTY_RESPONSE;
+extern const wchar_t* CHECK_UPDATE_FAILED_MALFORMED_RESPONSE;
+extern const wchar_t* CHECK_UPDATE_FAILED_UNKNOWN;
+extern const wchar_t* CHECK_UPDATE_FAILED_UNEXPECTED_RESPONSE;
+extern const wchar_t* TEXTHOOK_UPDATE_AVAILABLE;
+extern const wchar_t* TEXTHOOK_IS_LATEST;
 
 // Language configuration
 extern const char* LANGUAGE_SETTING;
@@ -91,8 +111,6 @@ namespace
 	constexpr auto CONFIG_LANGUAGE = u8"Language";
 
 	enum LaunchWithJapaneseLocale { PROMPT, ALWAYS, NEVER };
-
-	const char* CHECK_UPDATE = u8"Check for texthook updates on startup";
 
 	Ui::MainWindow ui;
 	std::atomic<DWORD> selectedProcessId = 0;
@@ -710,13 +728,13 @@ namespace
 
 	std::wstring DescribeWinHttpError(DWORD errorCode)
 	{
-		if (errorCode == ERROR_WINHTTP_TIMEOUT) return L"request timed out";
-		if (errorCode == ERROR_WINHTTP_NAME_NOT_RESOLVED) return L"DNS resolve failed";
-		if (errorCode == ERROR_WINHTTP_CANNOT_CONNECT) return L"cannot connect to server";
-		if (errorCode == ERROR_WINHTTP_CONNECTION_ERROR) return L"connection dropped";
-		if (errorCode == ERROR_WINHTTP_SECURE_FAILURE) return L"TLS/SSL handshake failed";
-		if (errorCode == ERROR_WINHTTP_INVALID_SERVER_RESPONSE) return L"invalid server response";
-		if (errorCode == ERROR_WINHTTP_OPERATION_CANCELLED) return L"request cancelled";
+		if (errorCode == ERROR_WINHTTP_TIMEOUT) return WINHTTP_TIMEOUT;
+		if (errorCode == ERROR_WINHTTP_NAME_NOT_RESOLVED) return WINHTTP_NAME_NOT_RESOLVED;
+		if (errorCode == ERROR_WINHTTP_CANNOT_CONNECT) return WINHTTP_CANNOT_CONNECT;
+		if (errorCode == ERROR_WINHTTP_CONNECTION_ERROR) return WINHTTP_CONNECTION_ERROR;
+		if (errorCode == ERROR_WINHTTP_SECURE_FAILURE) return WINHTTP_SECURE_FAILURE;
+		if (errorCode == ERROR_WINHTTP_INVALID_SERVER_RESPONSE) return WINHTTP_INVALID_SERVER_RESPONSE;
+		if (errorCode == ERROR_WINHTTP_OPERATION_CANCELLED) return WINHTTP_OPERATION_CANCELLED;
 
 		LPWSTR systemMessage = nullptr;
 		DWORD messageLength = FormatMessageW(
@@ -728,7 +746,7 @@ namespace
 			0,
 			nullptr
 		);
-		if (!messageLength || !systemMessage) return L"unknown error";
+		if (!messageLength || !systemMessage) return UNKNOWN_ERROR;
 
 		std::wstring message(systemMessage, messageLength);
 		LocalFree(systemMessage);
@@ -742,10 +760,10 @@ namespace
 		QString dllPath = QCoreApplication::applicationDirPath() + "/texthook.dll";
 		QFile file(dllPath);
 
-		Host::AddConsoleOutput(L"Checking for updates...");
+		Host::AddConsoleOutput(CHECKING_UPDATE);
 
 		if (!file.open(QIODevice::ReadOnly)) {
-			Host::AddConsoleOutput(L"Failed to open texthook.dll. Where's my texthook.dll?");
+			Host::AddConsoleOutput(OPEN_TEXTHOOK_FAILED);
 			return;
 		}
 
@@ -769,44 +787,43 @@ namespace
 		}) {
 			if (httpRequest.statusCode != 200) {
 				Host::AddConsoleOutput(FormatString(
-					L"Update check failed: HTTP status %u.",
+					CHECK_UPDATE_FAILED_HTTP,
 					httpRequest.statusCode
 				));
 				return;
 			}
 
 			if (httpRequest.response.empty()) {
-				Host::AddConsoleOutput(L"Update check failed: empty server response.");
+				Host::AddConsoleOutput(CHECK_UPDATE_FAILED_EMPTY_RESPONSE);
 				return;
 			}
 
 			auto response = JSON::Parse(httpRequest.response);
 			if (!response.IsObject()) {
-				Host::AddConsoleOutput(L"Update check failed: malformed JSON response.");
+				Host::AddConsoleOutput(CHECK_UPDATE_FAILED_MALFORMED_RESPONSE);
 				return;
 			}
 
 			if (response[L"error"]) {
 				if (auto errorMessage = response[L"error"].String())
-					Host::AddConsoleOutput(FormatString(L"Update check failed: %s", errorMessage->c_str()));
+					Host::AddConsoleOutput(FormatString(CHECK_UPDATE_FAILED, errorMessage->c_str()));
 				else
-					Host::AddConsoleOutput(L"Update check failed: server returned an unknown error.");
+					Host::AddConsoleOutput(CHECK_UPDATE_FAILED_UNKNOWN);
 				return;
 			}
 			if (response[L"update"].Boolean()) {
 				if ( *response[L"update"].Boolean()) {
-					Host::AddConsoleOutput(FormatString(L"Texthook update found!\nCurrent: %s, New: %s\nDownload: %s",
+					Host::AddConsoleOutput(FormatString(TEXTHOOK_UPDATE_AVAILABLE,
 													response[L"current_release_date"].String()->c_str(), response[L"release_date"].String()->c_str(),
 													response[L"download_url"].String()->c_str()));
 				}
 				else {
-					Host::AddConsoleOutput(L"Texthook is up to date.");
+					Host::AddConsoleOutput(TEXTHOOK_IS_LATEST);
 				}
 			} else
-				Host::AddConsoleOutput(L"Unexpected response from update server. Maybe my server already exploded?\n"
-						   "Try visiting the update server in an external browser to see what's happening: https://api.iloli.one");
+				Host::AddConsoleOutput(CHECK_UPDATE_FAILED_UNEXPECTED_RESPONSE);
 		} else {
-			Host::AddConsoleOutput(FormatString(L"Update check failed: %s (code=%u).",
+			Host::AddConsoleOutput(FormatString(CHECK_UPDATE_FAILED_CODE,
 				DescribeWinHttpError(httpRequest.errorCode).c_str(), httpRequest.errorCode));
 		}
 	}

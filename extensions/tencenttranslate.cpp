@@ -10,6 +10,12 @@
 using json = nlohmann::json;
 
 extern const wchar_t *TRANSLATION_ERROR;
+extern const wchar_t* TENCENT_AUTH_PROMPT;
+extern const wchar_t* TRANSLATION_NO_TRANSLATION_FOUND;
+extern const wchar_t* TRANSLATION_JSON_PARSE_ERROR;
+extern const wchar_t* TRANSLATION_KEY_ERROR;
+extern const wchar_t* TRANSLATION_EXCEPTION_OCCURRED;
+extern const wchar_t* TRANSLATION_UNKNOWN_ERROR;
 
 const char *TRANSLATION_PROVIDER = "Tencent Translate";
 const char *GET_API_KEY_FROM = "https://cloud.tencent.com/document/product/551";
@@ -62,8 +68,6 @@ int tokenCount = 5, rateLimitTimespan = 1000, maxSentenceSize = 2000;
 
 namespace
 {
-	constexpr auto TENCENT_AUTH_PROMPT = L"Please fill in the SecretId|SecretKey for Tencent Cloud Translation in the API key field";
-
 	struct TencentCredentials
 	{
 		std::wstring secretId;
@@ -202,20 +206,20 @@ std::pair<bool, std::wstring> Translate(const std::wstring &text, TranslationPar
 					}
 				}
 
-				return { false, FormatString(L"%s: No translation found in response", TRANSLATION_ERROR) };
+				return { false, FormatString(L"%s: %s", TRANSLATION_ERROR, TRANSLATION_NO_TRANSLATION_FOUND) };
 			}
 			catch (const json::exception& e)
 			{
-				return { false, FormatString(L"%s: JSON parse error: %s", TRANSLATION_ERROR, StringToWideString(e.what()).c_str()) };
+				return { false, FormatString(L"%s: %s: %s", TRANSLATION_ERROR, TRANSLATION_JSON_PARSE_ERROR, StringToWideString(e.what()).c_str()) };
 			}
 		} else return { false, FormatString(L"%s (code=%lu)", TRANSLATION_ERROR, httpRequest.errorCode) };
 	} catch (const std::out_of_range &e) {
-		return {false, FormatString(L"Key error in translation map: %s", StringToWideString(e.what()).c_str())};
+		return {false, FormatString(L"%s: %s", TRANSLATION_KEY_ERROR, StringToWideString(e.what()).c_str())};
 	}
 	catch (const std::exception &e) {
-		return {false, FormatString(L"Exception occurred: %s", StringToWideString(e.what()).c_str())};
+		return {false, FormatString(L"%s: %s", TRANSLATION_EXCEPTION_OCCURRED, StringToWideString(e.what()).c_str())};
 	}
 	catch (...) {
-		return {false, L"Unknown error occurred during translation"};
+		return {false, TRANSLATION_UNKNOWN_ERROR};
 	}
 }

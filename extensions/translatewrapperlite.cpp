@@ -11,6 +11,7 @@
 extern const char *NATIVE_LANGUAGE;
 extern const char *TRANSLATE_TO;
 extern const char *TRANSLATE_FROM;
+extern const char *CONFIGURE_TRANSLATION_SETTINGS;
 extern const char *TRANSLATE_SELECTED_THREAD_ONLY;
 extern const char *RATE_LIMIT_ALL_THREADS;
 extern const char *RATE_LIMIT_SELECTED_THREAD;
@@ -19,6 +20,7 @@ extern const char *FILTER_GARBAGE;
 extern const char *MAX_TRANSLATIONS_IN_TIMESPAN;
 extern const char *TIMESPAN;
 extern const char *MAX_SENTENCE_SIZE;
+extern const char *PORT;
 extern const wchar_t *SENTENCE_TOO_LARGE_TO_TRANS;
 extern const wchar_t *TRANSLATION_ERROR;
 extern const wchar_t *TOO_MANY_TRANS_REQUESTS;
@@ -69,7 +71,7 @@ public:
 
         settings.beginGroup(TRANSLATION_PROVIDER);
 
-        auto infoLabel = new QLabel("Q: How do I set the source language, target language, and API key?\nA: You need to modify the corresponding translate API's .env file.", this);
+        auto infoLabel = new QLabel(CONFIGURE_TRANSLATION_SETTINGS, this);
         display->addRow(infoLabel);
 
         auto translateToCombo = new QComboBox(this);
@@ -113,12 +115,12 @@ public:
                  {tokenCount, MAX_TRANSLATIONS_IN_TIMESPAN},
                  {rateLimitTimespan, TIMESPAN},
                  {maxSentenceSize, MAX_SENTENCE_SIZE},
-                 {port, "Port"}
+                 {port, PORT}
              }) {
             value = settings.value(label, value).toInt();
             auto spinBox = new QSpinBox(this);
             spinBox->setRange(0, INT_MAX);
-            if (label == "Port") spinBox->setRange(1, 65535);
+            if (label == PORT) spinBox->setRange(1, 65535);
             spinBox->setValue(value);
             display->addRow(label, spinBox);
             connect(spinBox, qOverload<int>(&QSpinBox::valueChanged), [label, &value](int newValue) {

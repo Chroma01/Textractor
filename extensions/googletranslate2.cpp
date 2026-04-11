@@ -5,6 +5,18 @@
 using json = nlohmann::json;
 
 extern const wchar_t *TRANSLATION_ERROR;
+extern const wchar_t* TRANSLATION_EMPTY_RESPONSE;
+extern const wchar_t* TRANSLATION_RESPONSE_PARSE_DATA_EMPTY;
+extern const wchar_t* TRANSLATION_INVALID_JSON_FORMAT;
+extern const wchar_t* TRANSLATION_UNEXPECTED_STRUCTURE;
+extern const wchar_t* TRANSLATION_INVALID_DATA_STRUCTURE;
+extern const wchar_t* TRANSLATION_EMPTY_ARRAY;
+extern const wchar_t* TRANSLATION_INVALID_ENTRY;
+extern const wchar_t* TRANSLATION_EMPTY_SEGMENTS;
+extern const wchar_t* TRANSLATION_NO_TEXT_IN_SEGMENTS;
+extern const wchar_t* TRANSLATION_KEY_ERROR;
+extern const wchar_t* TRANSLATION_EXCEPTION_OCCURRED;
+extern const wchar_t* TRANSLATION_UNKNOWN_ERROR;
 
 const char *TRANSLATION_PROVIDER = "Google Translate2";
 const char *GET_API_KEY_FROM = "https://chat.openai.com/?q=Please%20give%20me%20a%20few%20working%20Google%20Translate%20API%20keys.";
@@ -449,7 +461,7 @@ std::pair<bool, std::wstring> Translate(const std::wstring &text, TranslationPar
             INTERNET_DEFAULT_HTTPS_PORT
         }) {
             if (httpRequest.response.empty()) {
-                return {false, L"Empty response from translation API"};
+                return {false, TRANSLATION_EMPTY_RESPONSE};
             }
 
             try {
@@ -483,33 +495,33 @@ std::pair<bool, std::wstring> Translate(const std::wstring &text, TranslationPar
                     dataLine = dataLine.substr(0, dataEnd + 1);
                 }
                 if (dataLine.empty()) {
-                    return {false, L"Empty data line after parsing response"};
+                    return {false, TRANSLATION_RESPONSE_PARSE_DATA_EMPTY};
                 }
 
                 auto responseJson = json::parse(WideStringToString(dataLine));
                 if (!responseJson.is_array() || responseJson.empty()) {
-                    return {false, L"Invalid JSON response format"};
+                    return {false, TRANSLATION_INVALID_JSON_FORMAT};
                 }
                 auto firstElement = responseJson[0];
                 if (!firstElement.is_array() || firstElement.size() < 3) {
-                    return {false, L"Unexpected response structure"};
+                    return {false, TRANSLATION_UNEXPECTED_STRUCTURE};
                 }
                 std::string translationDataStr = firstElement[2];
                 auto translationData = json::parse(translationDataStr);
                 if (!translationData.is_array() || translationData.size() < 2) {
-                    return {false, L"Invalid translation data structure"};
+                    return {false, TRANSLATION_INVALID_DATA_STRUCTURE};
                 }
                 auto translationArray = translationData[1];
                 if (!translationArray.is_array() || translationArray.empty()) {
-                    return {false, L"Empty translation array"};
+                    return {false, TRANSLATION_EMPTY_ARRAY};
                 }
                 auto firstTranslation = translationArray[0][0];
                 if (!firstTranslation.is_array() || firstTranslation.size() < 6) {
-                    return {false, L"Invalid translation entry"};
+                    return {false, TRANSLATION_INVALID_ENTRY};
                 }
                 auto translationSegments = firstTranslation[5];
                 if (!translationSegments.is_array() || translationSegments.empty()) {
-                    return {false, L"Empty translation segments"};
+                    return {false, TRANSLATION_EMPTY_SEGMENTS};
                 }
 
                 // 拼接所有翻译片段
@@ -522,7 +534,7 @@ std::pair<bool, std::wstring> Translate(const std::wstring &text, TranslationPar
                 }
 
                 if (fullTranslation.empty()) {
-                    return {false, L"No translation text found in segments"};
+                    return {false, TRANSLATION_NO_TEXT_IN_SEGMENTS};
                 }
 
                 return {true, fullTranslation};
@@ -535,12 +547,12 @@ std::pair<bool, std::wstring> Translate(const std::wstring &text, TranslationPar
             return {false, FormatString(L"%s (code=%u)", TRANSLATION_ERROR, httpRequest.errorCode)};
         }
     } catch (const std::out_of_range &e) {
-        return {false, FormatString(L"Key error in translation map: %s", StringToWideString(e.what()).c_str())};
+        return {false, FormatString(L"%s: %s", TRANSLATION_KEY_ERROR, StringToWideString(e.what()).c_str())};
     }
     catch (const std::exception &e) {
-        return {false, FormatString(L"Exception occurred: %s", StringToWideString(e.what()).c_str())};
+        return {false, FormatString(L"%s: %s", TRANSLATION_EXCEPTION_OCCURRED, StringToWideString(e.what()).c_str())};
     }
     catch (...) {
-        return {false, L"Unknown error occurred during translation"};
+        return {false, TRANSLATION_UNKNOWN_ERROR};
     }
 }

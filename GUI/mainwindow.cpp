@@ -75,10 +75,20 @@ extern const wchar_t* CL_OPTIONS;
 extern const wchar_t* LAUNCH_FAILED;
 extern const wchar_t* INVALID_CODE;
 
+// Language configuration
+extern const char* LANGUAGE_SETTING;
+extern const char* LANGUAGE_RESTART_NOTICE;
+enum class Language;
+extern Language CURRENT_LANGUAGE;
+extern const char* LANGUAGE_NAMES[];
+extern const int LANGUAGE_COUNT;
+extern void Localize();
+
 namespace
 {
 	constexpr auto HOOK_SAVE_FILE = u8"SavedHooks.txt";
 	constexpr auto GAME_SAVE_FILE = u8"SavedGames.txt";
+	constexpr auto CONFIG_LANGUAGE = u8"Language";
 
 	enum LaunchWithJapaneseLocale { PROMPT, ALWAYS, NEVER };
 
@@ -567,6 +577,13 @@ namespace
 			layout.addRow(label, spinBox);
 			QObject::connect(&saveButton, &QPushButton::clicked, [spinBox, label, &settings, &value] { settings.setValue(label, value = spinBox->value()); });
 		}
+		QComboBox languageCombo(&dialog);
+		for (int i = 0; i < LANGUAGE_COUNT; ++i)
+		{
+			languageCombo.addItem(LANGUAGE_NAMES[i]);
+		}
+		languageCombo.setCurrentIndex(settings.value(CONFIG_LANGUAGE, 0).toInt());
+		layout.addRow(LANGUAGE_SETTING, &languageCombo);
 		QComboBox localeCombo(&dialog);
 		assert(PROMPT == 0 && ALWAYS == 1 && NEVER == 2);
 		localeCombo.addItems({ { "Prompt", "Always", "Never" } });
@@ -574,7 +591,18 @@ namespace
 		layout.addRow(CONFIG_JP_LOCALE, &localeCombo);
 		QObject::connect(&localeCombo, qOverload<int>(&QComboBox::activated), [&settings](int i) { settings.setValue(CONFIG_JP_LOCALE, i); });
 		layout.addWidget(&saveButton);
-		QObject::connect(&saveButton, &QPushButton::clicked, &dialog, &QDialog::accept);
+		QObject::connect(&saveButton, &QPushButton::clicked, [&dialog, &settings, &languageCombo]
+		{
+			int currentLanguage = settings.value(CONFIG_LANGUAGE, 0).toInt();
+			int selectedLanguage = languageCombo.currentIndex();
+			settings.setValue(CONFIG_LANGUAGE, selectedLanguage);
+
+			if (currentLanguage != selectedLanguage)
+			{
+				QMessageBox::information(This, SETTINGS, LANGUAGE_RESTART_NOTICE);
+			}
+			dialog.accept();
+		});
 		dialog.setWindowTitle(SETTINGS);
 		dialog.exec();
 	}
@@ -788,6 +816,15 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 {
 	This = this;
 	ui.setupUi(this);
+
+	Settings settings;
+	int languageIndex = settings.value(CONFIG_LANGUAGE, 0).toInt();
+	if (languageIndex >= 0 && languageIndex < LANGUAGE_COUNT)
+	{
+		CURRENT_LANGUAGE = static_cast<Language>(languageIndex);
+		Localize();
+	}
+
 	extenWindow = new ExtenWindow(this);
 	for (auto [text, slot] : Array<const char*, void(&)()>{
 		{ ATTACH, AttachProcess },
@@ -822,7 +859,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 	connect(ui.textOutput, &QPlainTextEdit::selectionChanged, this, CopyUnlessMouseDown);
 	connect(ui.textOutput, &QPlainTextEdit::customContextMenuRequested, this, OutputContextMenu);
 
-	Settings settings;
 	if (settings.contains(WINDOW) && QApplication::screenAt(settings.value(WINDOW).toRect().center())) setGeometry(settings.value(WINDOW).toRect());
 	SetOutputFont(settings.value(FONT, ui.textOutput->font().toString()).toString());
 	TextThread::filterRepetition = settings.value(FILTER_REPETITION, TextThread::filterRepetition).toBool();

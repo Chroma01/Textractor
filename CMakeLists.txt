@@ -12,6 +12,7 @@ add_compile_options(
   /std:c++17
   /MP
   /wd4018 # signed/unsigned mismatch
+  /utf-8
   /DVERSION="${VERSION}"
   /DUNICODE # config.pri
   /D_UNICODE

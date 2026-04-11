@@ -42,6 +42,23 @@ extern const char* TIMER_HIDE_TEXT;
 extern const char* TEXT_TIMEOUT;
 extern const char* TEXT_TIMEOUT_ADD_PER_CHAR;
 
+constexpr auto KEY_FONT = u8"Font";
+constexpr auto KEY_BG_COLOR = u8"Background color";
+constexpr auto KEY_TEXT_COLOR = u8"Text color";
+constexpr auto KEY_OUTLINE_COLOR = u8"Outline color";
+constexpr auto KEY_OUTLINE_SIZE = u8"Outline size";
+constexpr auto KEY_HIDE_MOUSEOVER = u8"Hide while mouse on top";
+constexpr auto KEY_TEXT_TIMEOUT = u8"Timeout (msec, 0=disabled)";
+constexpr auto KEY_TEXT_TIMEOUT_ADD_PER_CHAR = u8"Additional timeout per char (msec)";
+constexpr auto KEY_TOPMOST = u8"Always on top";
+constexpr auto KEY_SIZE_LOCK = u8"Size lock";
+constexpr auto KEY_POSITION_LOCK = u8"Position lock";
+constexpr auto KEY_CENTERED_TEXT = u8"Centered text";
+constexpr auto KEY_AUTO_RESIZE_WINDOW_HEIGHT = u8"Auto resize window height";
+constexpr auto KEY_SHOW_ORIGINAL = u8"Original text";
+constexpr auto KEY_ORIGINAL_AFTER_TRANSLATION = u8"Original text after translation";
+constexpr auto KEY_DICTIONARY = u8"Dictionary";
+
 enum class Language;
 extern Language CURRENT_LANGUAGE;
 extern void Localize();
@@ -82,14 +99,14 @@ struct PrettyWindow : QDialog, Localizer
 
 		settings.beginGroup(name);
 		QFont font = ui.display->font();
-		if (font.fromString(settings.value(FONT, font.toString()).toString())) ui.display->setFont(font);
-		SetBackgroundColor(settings.value(BG_COLOR, backgroundColor).value<QColor>());
-		SetTextColor(settings.value(TEXT_COLOR, TextColor()).value<QColor>());
-		outliner->color = settings.value(OUTLINE_COLOR, outliner->color).value<QColor>();
-		outliner->size = settings.value(OUTLINE_SIZE, outliner->size).toDouble();
-		autoHide = settings.value(HIDE_MOUSEOVER, autoHide).toBool();
-		text_timeout = settings.value(TEXT_TIMEOUT, TEXT_TIMEOUT_DEF).toInt();
-		text_timeout_per_char = settings.value(TEXT_TIMEOUT_ADD_PER_CHAR, TEXT_TIMEOUT_ADD_PER_CHAR_DEF).toInt();
+		if (font.fromString(settings.value(KEY_FONT, font.toString()).toString())) ui.display->setFont(font);
+		SetBackgroundColor(settings.value(KEY_BG_COLOR, backgroundColor).value<QColor>());
+		SetTextColor(settings.value(KEY_TEXT_COLOR, TextColor()).value<QColor>());
+		outliner->color = settings.value(KEY_OUTLINE_COLOR, outliner->color).value<QColor>();
+		outliner->size = settings.value(KEY_OUTLINE_SIZE, outliner->size).toDouble();
+		autoHide = settings.value(KEY_HIDE_MOUSEOVER, autoHide).toBool();
+		text_timeout = settings.value(KEY_TEXT_TIMEOUT, TEXT_TIMEOUT_DEF).toInt();
+		text_timeout_per_char = settings.value(KEY_TEXT_TIMEOUT_ADD_PER_CHAR, TEXT_TIMEOUT_ADD_PER_CHAR_DEF).toInt();
 		menu.addAction(FONT, this, &PrettyWindow::RequestFont);
 		menu.addAction(BG_COLOR, [this] { if (hideText) ToggleHideText(); SetBackgroundColor(colorPrompt(this, backgroundColor, BG_COLOR)); });
 		menu.addAction(TEXT_COLOR, [this] { if (hideText) ToggleHideText(); SetTextColor(colorPrompt(this, TextColor(), TEXT_COLOR)); });
@@ -125,18 +142,18 @@ protected:
 	{
 		if (hideText)
 		{
-			if (settings.value(BG_COLOR).value<QColor>().alpha() > backgroundColorAlphaF) backgroundColor.setAlphaF(backgroundColorAlphaF);
-			if (settings.value(OUTLINE_COLOR).value<QColor>().alpha() > backgroundColorAlphaF) outliner->color.setAlphaF(backgroundColorAlphaF);
+			if (settings.value(KEY_BG_COLOR).value<QColor>().alpha() > backgroundColorAlphaF) backgroundColor.setAlphaF(backgroundColorAlphaF);
+			if (settings.value(KEY_OUTLINE_COLOR).value<QColor>().alpha() > backgroundColorAlphaF) outliner->color.setAlphaF(backgroundColorAlphaF);
 			QColor hiddenTextColor = TextColor();
-			if (settings.value(TEXT_COLOR).value<QColor>().alpha() > backgroundColorAlphaF) hiddenTextColor.setAlphaF(backgroundColorAlphaF);
+			if (settings.value(KEY_TEXT_COLOR).value<QColor>().alpha() > backgroundColorAlphaF) hiddenTextColor.setAlphaF(backgroundColorAlphaF);
 			ui.display->setPalette(QPalette(hiddenTextColor, {}, {}, {}, {}, {}, {}));
 			repaint();
 		}
 		else
 		{
-			backgroundColor.setAlpha(settings.value(BG_COLOR).value<QColor>().alpha());
-			outliner->color.setAlpha(settings.value(OUTLINE_COLOR).value<QColor>().alpha());
-			ui.display->setPalette(QPalette(settings.value(TEXT_COLOR).value<QColor>(), {}, {}, {}, {}, {}, {}));
+			backgroundColor.setAlpha(settings.value(KEY_BG_COLOR).value<QColor>().alpha());
+			outliner->color.setAlpha(settings.value(KEY_OUTLINE_COLOR).value<QColor>().alpha());
+			ui.display->setPalette(QPalette(settings.value(KEY_TEXT_COLOR).value<QColor>(), {}, {}, {}, {}, {}, {}));
 			repaint();
 		}
 	}
@@ -181,7 +198,7 @@ private:
 	{
 		if (QFont font = QFontDialog::getFont(&ok, ui.display->font(), this, FONT); ok)
 		{
-			settings.setValue(FONT, font.toString());
+			settings.setValue(KEY_FONT, font.toString());
 			ui.display->setFont(font);
 		}
 	};
@@ -192,7 +209,7 @@ private:
 		if (color.alpha() == 0) color.setAlpha(1);
 		backgroundColor = color;
 		repaint();
-		settings.setValue(BG_COLOR, color.name(QColor::HexArgb));
+		settings.setValue(KEY_BG_COLOR, color.name(QColor::HexArgb));
 	};
 
 	QColor TextColor()
@@ -204,7 +221,7 @@ private:
 	{
 		if (!color.isValid()) return;
 		ui.display->setPalette(QPalette(color, {}, {}, {}, {}, {}, {}));
-		settings.setValue(TEXT_COLOR, color.name(QColor::HexArgb));
+		settings.setValue(KEY_TEXT_COLOR, color.name(QColor::HexArgb));
 	};
 
 	void SetOutline(bool enable)
@@ -218,15 +235,15 @@ private:
 			outliner->size = QInputDialog::getDouble(this, OUTLINE_SIZE, OUTLINE_SIZE_INFO, -outliner->size, 0, INT_MAX, 2, nullptr, Qt::WindowCloseButtonHint);
 		}
 		else outliner->size = -outliner->size;
-		settings.setValue(OUTLINE_COLOR, outliner->color.name(QColor::HexArgb));
-		settings.setValue(OUTLINE_SIZE, outliner->size);
+		settings.setValue(KEY_OUTLINE_COLOR, outliner->color.name(QColor::HexArgb));
+		settings.setValue(KEY_OUTLINE_SIZE, outliner->size);
 	}
 
 	void SetHideMouseover(bool autoHide)
 	{
 		if (hideText)
 			ToggleHideText();
-		settings.setValue(HIDE_MOUSEOVER, this->autoHide = autoHide);
+		settings.setValue(KEY_HIDE_MOUSEOVER, this->autoHide = autoHide);
 		hideTextAction->setDisabled(autoHide);
 	};
 
@@ -235,8 +252,8 @@ private:
 		text_timeout = QInputDialog::getInt(this, TIMER_HIDE_TEXT, TEXT_TIMEOUT, text_timeout, 0, INT_MAX, 2, nullptr, Qt::WindowCloseButtonHint);
 		text_timeout_per_char = QInputDialog::getInt(this, TIMER_HIDE_TEXT, TEXT_TIMEOUT_ADD_PER_CHAR, text_timeout_per_char, 0, INT_MAX, 2, nullptr, Qt::WindowCloseButtonHint);
 
-		settings.setValue(TEXT_TIMEOUT, text_timeout);
-		settings.setValue(TEXT_TIMEOUT_ADD_PER_CHAR, text_timeout_per_char);
+		settings.setValue(KEY_TEXT_TIMEOUT, text_timeout);
+		settings.setValue(KEY_TEXT_TIMEOUT_ADD_PER_CHAR, text_timeout_per_char);
 	};
 
 	void paintEvent(QPaintEvent*) override
@@ -276,19 +293,19 @@ public:
 		ui.display->setTextFormat(Qt::PlainText);
 		if (settings.contains(WINDOW) && QApplication::screenAt(settings.value(WINDOW).toRect().bottomRight())) setGeometry(settings.value(WINDOW).toRect());
 
-		for (auto [name, default, slot] : Array<const char*, bool, void(ExtraWindow::*)(bool)>{
-			{ TOPMOST, false, &ExtraWindow::SetTopmost },
-			{ SIZE_LOCK, false, &ExtraWindow::SetSizeLock },
-			{ POSITION_LOCK, false, &ExtraWindow::SetPositionLock },
-			{ CENTERED_TEXT, false, &ExtraWindow::SetCenteredText },
-			{ AUTO_RESIZE_WINDOW_HEIGHT, false, &ExtraWindow::SetAutoResize },
-			{ SHOW_ORIGINAL, true, &ExtraWindow::SetShowOriginal },
-			{ ORIGINAL_AFTER_TRANSLATION, true, &ExtraWindow::SetShowOriginalAfterTranslation },
-			{ DICTIONARY, false, &ExtraWindow::SetUseDictionary },
+		for (auto [name,keyname, default, slot] : Array<const char*, const char*, bool, void(ExtraWindow::*)(bool)>{
+			{ TOPMOST, KEY_TOPMOST, false, &ExtraWindow::SetTopmost },
+			{ SIZE_LOCK, KEY_SIZE_LOCK, false, &ExtraWindow::SetSizeLock },
+			{ POSITION_LOCK, KEY_POSITION_LOCK, false, &ExtraWindow::SetPositionLock },
+			{ CENTERED_TEXT, KEY_CENTERED_TEXT, false, &ExtraWindow::SetCenteredText },
+			{ AUTO_RESIZE_WINDOW_HEIGHT, KEY_AUTO_RESIZE_WINDOW_HEIGHT, false, &ExtraWindow::SetAutoResize },
+			{ SHOW_ORIGINAL, KEY_SHOW_ORIGINAL, true, &ExtraWindow::SetShowOriginal },
+			{ ORIGINAL_AFTER_TRANSLATION, KEY_ORIGINAL_AFTER_TRANSLATION, true, &ExtraWindow::SetShowOriginalAfterTranslation },
+			{ DICTIONARY, KEY_DICTIONARY, false, &ExtraWindow::SetUseDictionary },
 		})
 		{
 			// delay processing anything until Textractor has finished initializing
-			QMetaObject::invokeMethod(this, std::bind(slot, this, default = settings.value(name, default).toBool()), Qt::QueuedConnection);
+			QMetaObject::invokeMethod(this, std::bind(slot, this, default = settings.value(keyname, default).toBool()), Qt::QueuedConnection);
 			auto action = menu.addAction(name, this, slot);
 			action->setCheckable(true);
 			action->setChecked(default);
@@ -378,41 +395,41 @@ private:
 	{
 		for (auto window : { winId(), dictionaryWindow.winId() })
 			SetWindowPos((HWND)window, topmost ? HWND_TOPMOST : HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
-		settings.setValue(TOPMOST, topmost);
+		settings.setValue(KEY_TOPMOST, topmost);
 	};
 
 	void SetPositionLock(bool locked)
 	{
-		settings.setValue(POSITION_LOCK, posLock = locked);
+		settings.setValue(KEY_POSITION_LOCK, posLock = locked);
 	};
 
 	void SetSizeLock(bool locked)
 	{
 		setSizeGripEnabled(!locked);
-		settings.setValue(SIZE_LOCK, sizeLock = locked);
+		settings.setValue(KEY_SIZE_LOCK, sizeLock = locked);
 	};
 
 	void SetCenteredText(bool centeredText)
 	{
 		ui.display->setAlignment(centeredText ? Qt::AlignHCenter : Qt::AlignLeft);
-		settings.setValue(CENTERED_TEXT, this->centeredText = centeredText);
+		settings.setValue(KEY_CENTERED_TEXT, this->centeredText = centeredText);
 	};
 
 	void SetAutoResize(bool autoResize)
 	{
-		settings.setValue(AUTO_RESIZE_WINDOW_HEIGHT, this->autoResize = autoResize);
+		settings.setValue(KEY_AUTO_RESIZE_WINDOW_HEIGHT, this->autoResize = autoResize);
 		DisplaySentence();
 	};
 
 	void SetShowOriginal(bool showOriginal)
 	{
-		settings.setValue(SHOW_ORIGINAL, this->showOriginal = showOriginal);
+		settings.setValue(KEY_SHOW_ORIGINAL, this->showOriginal = showOriginal);
 		DisplaySentence();
 	};
 
 	void SetShowOriginalAfterTranslation(bool showOriginalAfterTranslation)
 	{
-		settings.setValue(ORIGINAL_AFTER_TRANSLATION, this->showOriginalAfterTranslation = showOriginalAfterTranslation);
+		settings.setValue(KEY_ORIGINAL_AFTER_TRANSLATION, this->showOriginalAfterTranslation = showOriginalAfterTranslation);
 		DisplaySentence();
 	};
 
@@ -427,7 +444,7 @@ private:
 				_spawnlp(_P_DETACH, "notepad", "notepad", DICTIONARY_SAVE_FILE, NULL); // show file to user
 			}
 		}
-		settings.setValue(DICTIONARY, this->useDictionary = useDictionary);
+		settings.setValue(KEY_DICTIONARY, this->useDictionary = useDictionary);
 	}
 
 	void ToggleClickThrough()

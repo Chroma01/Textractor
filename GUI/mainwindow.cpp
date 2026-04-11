@@ -109,6 +109,20 @@ namespace
 	constexpr auto HOOK_SAVE_FILE = u8"SavedHooks.txt";
 	constexpr auto GAME_SAVE_FILE = u8"SavedGames.txt";
 	constexpr auto CONFIG_LANGUAGE = u8"Language";
+	constexpr auto KEY_FONT = u8"Font";
+	constexpr auto KEY_FILTER_REPETITION = u8"Filter repetition";
+	constexpr auto KEY_AUTO_ATTACH = u8"Auto attach";
+	constexpr auto KEY_ATTACH_SAVED_ONLY = u8"Auto attach (saved only)";
+	constexpr auto KEY_CHECK_UPDATE = u8"Check for texthook updates on startup";
+	constexpr auto KEY_SHOW_SYSTEM_PROCESSES = u8"Show system processes";
+	constexpr auto KEY_FLUSH_DELAY_SPACING = u8"Flush delay string spacing";
+	constexpr auto KEY_MAX_BUFFER_SIZE = u8"Max buffer size";
+	constexpr auto KEY_FLUSH_DELAY = u8"Flush delay";
+	constexpr auto KEY_MAX_HISTORY_SIZE = u8"Max history size";
+	constexpr auto KEY_LIMIT_STRING_LENGTH = u8"Limit string length (0=Off)";
+	constexpr auto KEY_DEFAULT_CODEPAGE = u8"Default codepage";
+	constexpr auto KEY_CONFIG_JP_LOCALE = u8"Launch with JP locale";
+
 
 	enum LaunchWithJapaneseLocale { PROMPT, ALWAYS, NEVER };
 
@@ -286,7 +300,7 @@ namespace
 		std::wstring path = std::wstring(process).erase(process.rfind(L'\\'));
 
 		PROCESS_INFORMATION info = {};
-		auto useLocale = Settings().value(CONFIG_JP_LOCALE, PROMPT).toInt();
+		auto useLocale = Settings().value(KEY_CONFIG_JP_LOCALE, PROMPT).toInt();
 		if (!x64 && (useLocale == ALWAYS || (useLocale == PROMPT && QMessageBox::question(This, SELECT_PROCESS, USE_JP_LOCALE) == QMessageBox::Yes)))
 		{
 			if (HMODULE localeEmulator = LoadLibraryW(L"LoaderDll"))
@@ -567,33 +581,33 @@ namespace
 		Settings settings(&dialog);
 		QFormLayout layout(&dialog);
 		QPushButton saveButton(SAVE_SETTINGS, &dialog);
-		for (auto [value, label] : Array<bool&, const char*>{
-			{ TextThread::filterRepetition, FILTER_REPETITION },
-			{ autoAttach, AUTO_ATTACH },
-			{ autoAttachSavedOnly, ATTACH_SAVED_ONLY },
-			{checkUpdate,CHECK_UPDATE},
-			{ showSystemProcesses, SHOW_SYSTEM_PROCESSES },
-			{ TextThread::flushDelaySpacing, FLUSH_DELAY_SPACING },
+		for (auto [value, label, keylabel] : Array<bool&, const char*, const char*>{
+			{ TextThread::filterRepetition, FILTER_REPETITION, KEY_FILTER_REPETITION },
+			{ autoAttach, AUTO_ATTACH, KEY_AUTO_ATTACH },
+			{ autoAttachSavedOnly, ATTACH_SAVED_ONLY, KEY_ATTACH_SAVED_ONLY },
+			{checkUpdate,CHECK_UPDATE, KEY_CHECK_UPDATE},
+			{ showSystemProcesses, SHOW_SYSTEM_PROCESSES, KEY_SHOW_SYSTEM_PROCESSES },
+			{ TextThread::flushDelaySpacing, FLUSH_DELAY_SPACING, KEY_FLUSH_DELAY_SPACING },
 		})
 		{
 			auto checkBox = new QCheckBox(&dialog);
 			checkBox->setChecked(value);
 			layout.addRow(label, checkBox);
-			QObject::connect(&saveButton, &QPushButton::clicked, [checkBox, label, &settings, &value] { settings.setValue(label, value = checkBox->isChecked()); });
+			QObject::connect(&saveButton, &QPushButton::clicked, [checkBox, keylabel, &settings, &value] { settings.setValue(keylabel, value = checkBox->isChecked()); });
 		}
-		for (auto [value, label] : Array<int&, const char*>{
-			{ TextThread::maxBufferSize, MAX_BUFFER_SIZE },
-			{ TextThread::flushDelay, FLUSH_DELAY },
-			{ TextThread::maxHistorySize, MAX_HISTORY_SIZE },
-			{ TextThread::limitStringLength, LIMIT_STRING_LENGTH },
-			{ Host::defaultCodepage, DEFAULT_CODEPAGE },
+		for (auto [value, label, keylabel] : Array<int&, const char*, const char*>{
+			{ TextThread::maxBufferSize, MAX_BUFFER_SIZE, KEY_MAX_BUFFER_SIZE },
+			{ TextThread::flushDelay, FLUSH_DELAY, KEY_FLUSH_DELAY },
+			{ TextThread::maxHistorySize, MAX_HISTORY_SIZE, KEY_MAX_HISTORY_SIZE },
+			{ TextThread::limitStringLength, LIMIT_STRING_LENGTH, KEY_LIMIT_STRING_LENGTH },
+			{ Host::defaultCodepage, DEFAULT_CODEPAGE, KEY_DEFAULT_CODEPAGE },
 		})
 		{
 			auto spinBox = new QSpinBox(&dialog);
 			spinBox->setMaximum(INT_MAX);
 			spinBox->setValue(value);
 			layout.addRow(label, spinBox);
-			QObject::connect(&saveButton, &QPushButton::clicked, [spinBox, label, &settings, &value] { settings.setValue(label, value = spinBox->value()); });
+			QObject::connect(&saveButton, &QPushButton::clicked, [spinBox, keylabel, &settings, &value] { settings.setValue(keylabel, value = spinBox->value()); });
 		}
 		QComboBox languageCombo(&dialog);
 		for (int i = 0; i < LANGUAGE_COUNT; ++i)
@@ -605,9 +619,9 @@ namespace
 		QComboBox localeCombo(&dialog);
 		assert(PROMPT == 0 && ALWAYS == 1 && NEVER == 2);
 		localeCombo.addItems({ { "Prompt", "Always", "Never" } });
-		localeCombo.setCurrentIndex(settings.value(CONFIG_JP_LOCALE, PROMPT).toInt());
+		localeCombo.setCurrentIndex(settings.value(KEY_CONFIG_JP_LOCALE, PROMPT).toInt());
 		layout.addRow(CONFIG_JP_LOCALE, &localeCombo);
-		QObject::connect(&localeCombo, qOverload<int>(&QComboBox::activated), [&settings](int i) { settings.setValue(CONFIG_JP_LOCALE, i); });
+		QObject::connect(&localeCombo, qOverload<int>(&QComboBox::activated), [&settings](int i) { settings.setValue(KEY_CONFIG_JP_LOCALE, i); });
 		layout.addWidget(&saveButton);
 		QObject::connect(&saveButton, &QPushButton::clicked, [&dialog, &settings, &languageCombo]
 		{
@@ -637,7 +651,7 @@ namespace
 		font.fromString(fontString);
 		font.setStyleStrategy(QFont::NoFontMerging);
 		ui.textOutput->setFont(font);
-		Settings().setValue(FONT, font.toString());
+		Settings().setValue(KEY_FONT, font.toString());
 	}
 
 	void ProcessConnected(DWORD processId)
@@ -877,18 +891,18 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 	connect(ui.textOutput, &QPlainTextEdit::customContextMenuRequested, this, OutputContextMenu);
 
 	if (settings.contains(WINDOW) && QApplication::screenAt(settings.value(WINDOW).toRect().center())) setGeometry(settings.value(WINDOW).toRect());
-	SetOutputFont(settings.value(FONT, ui.textOutput->font().toString()).toString());
-	TextThread::filterRepetition = settings.value(FILTER_REPETITION, TextThread::filterRepetition).toBool();
-	autoAttach = settings.value(AUTO_ATTACH, autoAttach).toBool();
-	autoAttachSavedOnly = settings.value(ATTACH_SAVED_ONLY, autoAttachSavedOnly).toBool();
-	checkUpdate = settings.value(CHECK_UPDATE, checkUpdate).toBool();
-	showSystemProcesses = settings.value(SHOW_SYSTEM_PROCESSES, showSystemProcesses).toBool();
-	TextThread::flushDelaySpacing = settings.value(FLUSH_DELAY_SPACING, TextThread::flushDelaySpacing).toBool();
-	TextThread::flushDelay = settings.value(FLUSH_DELAY, TextThread::flushDelay).toInt();
-	TextThread::maxBufferSize = settings.value(MAX_BUFFER_SIZE, TextThread::maxBufferSize).toInt();
-	TextThread::maxHistorySize = settings.value(MAX_HISTORY_SIZE, TextThread::maxHistorySize).toInt();
-	TextThread::limitStringLength = settings.value(LIMIT_STRING_LENGTH, TextThread::limitStringLength).toInt();
-	Host::defaultCodepage = settings.value(DEFAULT_CODEPAGE, Host::defaultCodepage).toInt();
+	SetOutputFont(settings.value(KEY_FONT, ui.textOutput->font().toString()).toString());
+	TextThread::filterRepetition = settings.value(KEY_FILTER_REPETITION, TextThread::filterRepetition).toBool();
+	autoAttach = settings.value(KEY_AUTO_ATTACH, autoAttach).toBool();
+	autoAttachSavedOnly = settings.value(KEY_ATTACH_SAVED_ONLY, autoAttachSavedOnly).toBool();
+	checkUpdate = settings.value(KEY_CHECK_UPDATE, checkUpdate).toBool();
+	showSystemProcesses = settings.value(KEY_SHOW_SYSTEM_PROCESSES, showSystemProcesses).toBool();
+	TextThread::flushDelaySpacing = settings.value(KEY_FLUSH_DELAY_SPACING, TextThread::flushDelaySpacing).toBool();
+	TextThread::flushDelay = settings.value(KEY_FLUSH_DELAY, TextThread::flushDelay).toInt();
+	TextThread::maxBufferSize = settings.value(KEY_MAX_BUFFER_SIZE, TextThread::maxBufferSize).toInt();
+	TextThread::maxHistorySize = settings.value(KEY_MAX_HISTORY_SIZE, TextThread::maxHistorySize).toInt();
+	TextThread::limitStringLength = settings.value(KEY_LIMIT_STRING_LENGTH, TextThread::limitStringLength).toInt();
+	Host::defaultCodepage = settings.value(KEY_DEFAULT_CODEPAGE, Host::defaultCodepage).toInt();
 
 	Host::Start(ProcessConnected, ProcessDisconnected, ThreadAdded, ThreadRemoved, SentenceReceived);
 	current = &Host::GetThread(Host::console);

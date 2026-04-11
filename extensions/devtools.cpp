@@ -14,6 +14,10 @@ extern const char* HIDE_CHROME;
 extern const char* DEVTOOLS_STATUS;
 extern const char* AUTO_START;
 
+constexpr auto KEY_CHROME_LOCATION = u8"Google Chrome file location";
+constexpr auto KEY_HIDE_CHROME = u8"Hide Chrome window";
+constexpr auto KEY_AUTO_START = u8"Start automatically";
+
 extern const char* TRANSLATION_PROVIDER;
 
 extern QFormLayout* display;
@@ -89,7 +93,7 @@ namespace DevTools
 {
 	void Initialize()
 	{		
-		QString chromePath = settings.value(CHROME_LOCATION).toString();
+		QString chromePath = settings.value(KEY_CHROME_LOCATION).toString();
 		if (chromePath.isEmpty())
 		{
 			for (auto [_, process] : GetAllProcesses())
@@ -115,12 +119,12 @@ namespace DevTools
 			}
 		} chromeSelector;
 		chromePathEdit->installEventFilter(&chromeSelector);
-		QObject::connect(chromePathEdit, &QLineEdit::textChanged, [chromePathEdit](QString path) { settings.setValue(CHROME_LOCATION, path); });
+		QObject::connect(chromePathEdit, &QLineEdit::textChanged, [chromePathEdit](QString path) { settings.setValue(KEY_CHROME_LOCATION, path); });
 		display->addRow(CHROME_LOCATION, chromePathEdit);
 		auto headlessCheck = new QCheckBox();
 		auto startButton = new QPushButton(START_DEVTOOLS), stopButton = new QPushButton(STOP_DEVTOOLS);
-		headlessCheck->setChecked(settings.value(HIDE_CHROME, true).toBool());
-		QObject::connect(headlessCheck, &QCheckBox::clicked, [](bool headless) { settings.setValue(HIDE_CHROME, headless); });
+		headlessCheck->setChecked(settings.value(KEY_HIDE_CHROME, true).toBool());
+		QObject::connect(headlessCheck, &QCheckBox::clicked, [](bool headless) { settings.setValue(KEY_HIDE_CHROME, headless); });
 		QObject::connect(startButton, &QPushButton::clicked, [chromePathEdit, headlessCheck] { Start(S(chromePathEdit->text()), headlessCheck->isChecked()); });
 		QObject::connect(stopButton, &QPushButton::clicked, &Close);
 		auto buttons = new QHBoxLayout();
@@ -128,8 +132,8 @@ namespace DevTools
 		buttons->addWidget(stopButton);
 		display->addRow(HIDE_CHROME, headlessCheck);
 		auto autoStartCheck = new QCheckBox();
-		autoStartCheck->setChecked(settings.value(AUTO_START, false).toBool());
-		QObject::connect(autoStartCheck, &QCheckBox::clicked, [](bool autoStart) { settings.setValue(AUTO_START, autoStart); });
+		autoStartCheck->setChecked(settings.value(KEY_AUTO_START, false).toBool());
+		QObject::connect(autoStartCheck, &QCheckBox::clicked, [](bool autoStart) { settings.setValue(KEY_AUTO_START, autoStart); });
 		display->addRow(AUTO_START, autoStartCheck);
 		display->addRow(buttons);
 		statusLabel = new QLabel("Stopped");

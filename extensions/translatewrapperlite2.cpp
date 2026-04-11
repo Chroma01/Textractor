@@ -27,6 +27,16 @@ extern const char *TRANSLATION_PROVIDER;
 extern const QStringList languagesTo, languagesFrom;
 extern bool translateSelectedOnly, useRateLimiter, rateLimitSelected, useCache, useFilter;
 extern int tokenCount, rateLimitTimespan, maxSentenceSize;
+constexpr auto KEY_TRANSLATE_TO = u8"Translate to";
+constexpr auto KEY_TRANSLATE_FROM = u8"Translate from";
+constexpr auto KEY_TRANSLATE_SELECTED_THREAD_ONLY = u8"Translate selected text thread only";
+constexpr auto KEY_RATE_LIMIT_ALL_THREADS = u8"Use rate limiter";
+constexpr auto KEY_RATE_LIMIT_SELECTED_THREAD = u8"Rate limit selected text thread";
+constexpr auto KEY_USE_TRANS_CACHE = u8"Use translation cache";
+constexpr auto KEY_FILTER_GARBAGE = u8"Filter garbage characters";
+constexpr auto KEY_MAX_TRANSLATIONS_IN_TIMESPAN = u8"Max translation requests in timespan";
+constexpr auto KEY_TIMESPAN = u8"Timespan (ms)";
+constexpr auto KEY_MAX_SENTENCE_SIZE = u8"Max sentence size";
 
 enum class Language;
 extern Language CURRENT_LANGUAGE;
@@ -82,7 +92,7 @@ public:
         auto translateToCombo = new QComboBox(this);
         translateToCombo->addItems(languagesTo);
         int i = -1;
-        if (settings.contains(TRANSLATE_TO)) i = translateToCombo->findText(settings.value(TRANSLATE_TO).toString());
+        if (settings.contains(KEY_TRANSLATE_TO)) i = translateToCombo->findText(settings.value(KEY_TRANSLATE_TO).toString());
         if (i < 0) i = translateToCombo->findText(NATIVE_LANGUAGE, Qt::MatchStartsWith);
         if (i < 0) i = translateToCombo->findText("English", Qt::MatchStartsWith);
         translateToCombo->setCurrentIndex(i);
@@ -94,41 +104,41 @@ public:
         translateFromCombo->addItem("?");
         translateFromCombo->addItems(languagesFrom);
         i = -1;
-        if (settings.contains(TRANSLATE_FROM)) i = translateFromCombo->findText(
-                                                   settings.value(TRANSLATE_FROM).toString());
+        if (settings.contains(KEY_TRANSLATE_FROM)) i = translateFromCombo->findText(
+                                                   settings.value(KEY_TRANSLATE_FROM).toString());
         if (i < 0) i = 0;
         translateFromCombo->setCurrentIndex(i);
         SaveTranslateFrom(translateFromCombo->currentText());
         display->addRow(TRANSLATE_FROM, translateFromCombo);
         connect(translateFromCombo, &QComboBox::currentTextChanged, this, &Window::SaveTranslateFrom);
 
-        for (auto [value, label]: Array<bool &, const char *>{
-                 {translateSelectedOnly, TRANSLATE_SELECTED_THREAD_ONLY},
-                 {useRateLimiter, RATE_LIMIT_ALL_THREADS},
-                 {rateLimitSelected, RATE_LIMIT_SELECTED_THREAD},
-                 {useCache, USE_TRANS_CACHE},
-                 {useFilter, FILTER_GARBAGE}
+        for (auto [value, label, keylabel]: Array<bool &, const char *, const char *>{
+                 {translateSelectedOnly, TRANSLATE_SELECTED_THREAD_ONLY, KEY_TRANSLATE_SELECTED_THREAD_ONLY},
+                 {useRateLimiter, RATE_LIMIT_ALL_THREADS, KEY_RATE_LIMIT_ALL_THREADS},
+                 {rateLimitSelected, RATE_LIMIT_SELECTED_THREAD, KEY_RATE_LIMIT_SELECTED_THREAD},
+                 {useCache, USE_TRANS_CACHE, KEY_USE_TRANS_CACHE},
+                 {useFilter, FILTER_GARBAGE, KEY_FILTER_GARBAGE}
              }) {
-            value = settings.value(label, value).toBool();
+            value = settings.value(keylabel, value).toBool();
             auto checkBox = new QCheckBox(this);
             checkBox->setChecked(value);
             display->addRow(label, checkBox);
-            connect(checkBox, &QCheckBox::clicked, [label, &value](bool checked) {
-                settings.setValue(label, value = checked);
+            connect(checkBox, &QCheckBox::clicked, [keylabel, &value](bool checked) {
+                settings.setValue(keylabel, value = checked);
             });
         }
-        for (auto [value, label]: Array<int &, const char *>{
-                 {tokenCount, MAX_TRANSLATIONS_IN_TIMESPAN},
-                 {rateLimitTimespan, TIMESPAN},
-                 {maxSentenceSize, MAX_SENTENCE_SIZE},
+        for (auto [value, label, keylabel]: Array<int &, const char *, const char *>{
+                 {tokenCount, MAX_TRANSLATIONS_IN_TIMESPAN, KEY_MAX_TRANSLATIONS_IN_TIMESPAN},
+                 {rateLimitTimespan, TIMESPAN, KEY_TIMESPAN},
+                 {maxSentenceSize, MAX_SENTENCE_SIZE, KEY_MAX_SENTENCE_SIZE},
              }) {
-            value = settings.value(label, value).toInt();
+            value = settings.value(keylabel, value).toInt();
             auto spinBox = new QSpinBox(this);
             spinBox->setRange(0, INT_MAX);
             spinBox->setValue(value);
             display->addRow(label, spinBox);
-            connect(spinBox, qOverload<int>(&QSpinBox::valueChanged), [label, &value](int newValue) {
-                settings.setValue(label, value = newValue);
+            connect(spinBox, qOverload<int>(&QSpinBox::valueChanged), [keylabel, &value](int newValue) {
+                settings.setValue(keylabel, value = newValue);
             });
         }
 
@@ -143,12 +153,12 @@ public:
 private:
     void SaveTranslateTo(QString language) {
         SaveCache();
-        settings.setValue(TRANSLATE_TO, S(tlp->translateTo = S(language)));
+        settings.setValue(KEY_TRANSLATE_TO, S(tlp->translateTo = S(language)));
         LoadCache();
     }
 
     void SaveTranslateFrom(QString language) {
-        settings.setValue(TRANSLATE_FROM, S(tlp->translateFrom = S(language)));
+        settings.setValue(KEY_TRANSLATE_FROM, S(tlp->translateFrom = S(language)));
     }
 } window;
 

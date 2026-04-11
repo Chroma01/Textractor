@@ -43,6 +43,10 @@ extern const char* TIMER_HIDE_TEXT;
 extern const char* TEXT_TIMEOUT;
 extern const char* TEXT_TIMEOUT_ADD_PER_CHAR;
 
+enum class Language;
+extern Language CURRENT_LANGUAGE;
+extern void Localize();
+
 constexpr auto DICTIONARY_SAVE_FILE = u8"SavedDictionary.txt";
 constexpr int CLICK_THROUGH_HOTKEY = 0xc0d0;
 constexpr int HIDE_TEXT_HOTKEY = 0xc0d1;
@@ -65,6 +69,12 @@ struct PrettyWindow : QDialog, Localizer
 
 	PrettyWindow(const char* name)
 	{
+		QString iniPath = QCoreApplication::applicationDirPath() + "/Textractor.ini";
+		QSettings settings0(iniPath, QSettings::IniFormat);
+		int langId = settings0.value("Language", 0).toInt();
+		CURRENT_LANGUAGE = static_cast<Language>(langId);
+		Localize();
+
 		ui.setupUi(this);
 		ui.display->setGraphicsEffect(outliner = new Outliner);
 		setWindowFlags(Qt::FramelessWindowHint);

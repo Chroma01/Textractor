@@ -9,6 +9,10 @@ extern const char* REGEX_FILTER;
 extern const char* INVALID_REGEX;
 extern const char* CURRENT_FILTER;
 
+enum class Language;
+extern Language CURRENT_LANGUAGE;
+extern void Localize();
+
 const char* REGEX_SAVE_FILE = "SavedRegexFilters.txt";
 
 std::optional<std::wregex> regex;
@@ -21,6 +25,12 @@ class Window : public QDialog, Localizer
 public:
 	Window() : QDialog(nullptr, Qt::WindowMinMaxButtonsHint)
 	{
+		QString iniPath = QCoreApplication::applicationDirPath() + "/Textractor.ini";
+		QSettings settings(iniPath, QSettings::IniFormat);
+		int langId = settings.value("Language", 0).toInt();
+		CURRENT_LANGUAGE = static_cast<Language>(langId);
+		Localize();
+
 		ui.setupUi(this);
 
 		connect(ui.regexEdit, &QLineEdit::textEdited, this, &Window::SetRegex);

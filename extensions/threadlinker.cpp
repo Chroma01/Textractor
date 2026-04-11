@@ -10,6 +10,10 @@ extern const char* THREAD_LINK_FROM;
 extern const char* THREAD_LINK_TO;
 extern const char* HEXADECIMAL;
 
+enum class Language;
+extern Language CURRENT_LANGUAGE;
+extern void Localize();
+
 std::unordered_map<int64_t, std::unordered_set<int64_t>> links;
 std::unordered_set<int64_t> universalLinks, empty;
 bool separateSentences = false; // allow user to change?
@@ -20,6 +24,12 @@ class Window : public QDialog, Localizer
 public:
 	Window() : QDialog(nullptr, Qt::WindowMinMaxButtonsHint)
 	{
+		QString iniPath = QCoreApplication::applicationDirPath() + "/Textractor.ini";
+		QSettings settings(iniPath, QSettings::IniFormat);
+		int langId = settings.value("Language", 0).toInt();
+		CURRENT_LANGUAGE = static_cast<Language>(langId);
+		Localize();
+
 		ui.setupUi(this);
 		ui.linkButton->setText(LINK);
 		ui.unlinkButton->setText(UNLINK);

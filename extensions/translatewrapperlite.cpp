@@ -30,6 +30,10 @@ extern const QStringList languagesTo, languagesFrom;
 extern bool translateSelectedOnly, useRateLimiter, rateLimitSelected, useCache, useFilter;
 extern int tokenCount, rateLimitTimespan, maxSentenceSize, port;
 
+enum class Language;
+extern Language CURRENT_LANGUAGE;
+extern void Localize();
+
 std::pair<bool, std::wstring> Translate(const std::wstring &text, TranslationParam tlp);
 
 QFormLayout *display;
@@ -67,6 +71,12 @@ namespace {
 class Window : public QDialog, Localizer {
 public:
     Window() : QDialog(nullptr, Qt::WindowMinMaxButtonsHint) {
+        QString iniPath = QCoreApplication::applicationDirPath() + "/Textractor.ini";
+        QSettings settings0(iniPath, QSettings::IniFormat);
+        int langId = settings0.value("Language", 0).toInt();
+        CURRENT_LANGUAGE = static_cast<Language>(langId);
+        Localize();
+
         display = new QFormLayout(this);
 
         settings.beginGroup(TRANSLATION_PROVIDER);

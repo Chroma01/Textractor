@@ -6,6 +6,10 @@ extern const char* LUA_INTRO;
 extern const char* LOAD_SCRIPT;
 extern const wchar_t* LUA_ERROR;
 
+enum class Language;
+extern Language CURRENT_LANGUAGE;
+extern void Localize();
+
 constexpr auto LUA_SAVE_FILE = u8"Textractor.lua";
 
 extern "C" // Lua library
@@ -45,6 +49,12 @@ class Window : public QDialog, Localizer
 public:
 	Window() : QDialog(nullptr, Qt::WindowMinMaxButtonsHint)
 	{
+		QString iniPath = QCoreApplication::applicationDirPath() + "/Textractor.ini";
+		QSettings settings(iniPath, QSettings::IniFormat);
+		int langId = settings.value("Language", 0).toInt();
+		CURRENT_LANGUAGE = static_cast<Language>(langId);
+		Localize();
+
 		connect(&loadButton, &QPushButton::clicked, this, &Window::LoadScript);
 
 		if (scriptEditor.toPlainText().isEmpty()) scriptEditor.setPlainText(LUA_INTRO);

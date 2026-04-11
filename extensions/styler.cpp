@@ -3,6 +3,9 @@
 #include <QPlainTextEdit>
 
 extern const char* LOAD_SCRIPT;
+enum class Language;
+extern Language CURRENT_LANGUAGE;
+extern void Localize();
 
 constexpr auto STYLE_SAVE_FILE = u8"Textractor.qss";
 
@@ -11,6 +14,12 @@ class Window : public QDialog, Localizer
 public:
 	Window() : QDialog(nullptr, Qt::WindowMinMaxButtonsHint)
 	{
+		QString iniPath = QCoreApplication::applicationDirPath() + "/Textractor.ini";
+		QSettings settings(iniPath, QSettings::IniFormat);
+		int langId = settings.value("Language", 0).toInt();
+		CURRENT_LANGUAGE = static_cast<Language>(langId);
+		Localize();
+
 		connect(&loadButton, &QPushButton::clicked, this, &Window::LoadScript);
 
 		if (scriptEditor.toPlainText().isEmpty())

@@ -7,10 +7,6 @@ build: Script
 
 environment:
   matrix:
-  - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
-    fprefix: Textractor-vs17
-    fprefix2: texthook-vs17
-    vs_gen: "Visual Studio 15 2017"
   - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
     fprefix: Textractor
     fprefix2: texthook
@@ -28,6 +24,12 @@ before_build:
       py -3 -m aqt install-qt windows desktop 5.13.2 win32_msvc2017 --outputdir C:\Qt &&
       py -3 -m aqt install-qt windows desktop 5.13.2 win64_msvc2017_64 --outputdir C:\Qt
     )
+  - copy C:\Textractor\languages\qtbase_zh_CN.qm C:\Qt\5.13.2\msvc2017\translations\qtbase_zh_CN.qm
+  - copy C:\Textractor\languages\qtbase_zh_CN.qm C:\Qt\5.13.2\msvc2017_64\translations\qtbase_zh_CN.qm
+  - copy C:\Textractor\languages\qtbase_pt_BR.qm C:\Qt\5.13.2\msvc2017\translations\qtbase_pt_BR.qm
+  - copy C:\Textractor\languages\qtbase_pt_BR.qm C:\Qt\5.13.2\msvc2017_64\translations\qtbase_pt_BR.qm
+  - copy C:\Textractor\languages\qtbase_tr.qm C:\Qt\5.13.2\msvc2017\translations\qtbase_tr.qm
+  - copy C:\Textractor\languages\qtbase_tr.qm C:\Qt\5.13.2\msvc2017_64\translations\qtbase_tr.qm
 
 build_script:
   - cd C:\
@@ -59,6 +61,6 @@ notifications:
 - provider: Email
   to:
   - i@chenx221.cyou
-  on_build_success: false
+  on_build_success: true
   on_build_failure: true
   on_build_status_changed: true

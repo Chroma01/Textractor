@@ -28761,10 +28761,14 @@ bool InsertUnityIl2GameSpHook() {
 			{
 				auto text = static_cast<LPWSTR>(data);
 				auto len =  static_cast<size_t>(*size);
-                WideStringFilter(text, &len, L"\\@", 2);
-                WideStringFilter(text, &len, L"\\n;", 3);
-                WideStringFilter(text, &len, L"\\n", 2);
-                WideCharFilter(text, &len, L'\u3000');
+        WideStringFilter(text, &len, L"\\@", 2);
+        WideStringFilter(text, &len, L"\\n;", 3);
+        WideStringFilter(text, &len, L"\\n", 2);
+        WideCharFilter(text, &len, L'\u3000');
+			  static const std::wregex pattern(LR"([\u2460-\u24FF])");
+			  static const std::wregex pattern2(LR"(\[([^\[\]\/]+)\/[^\[\]]+\])");
+			  RegexReplacerW(text, &len, pattern, L"");
+			  RegexReplacerW(text, &len, pattern2, L"$1");
 				*size = static_cast<DWORD>(len);
 				return true;
 			};
@@ -28773,6 +28777,7 @@ bool InsertUnityIl2GameSpHook() {
 			return true;
 		}
 	}
+  return false;
 }
 
 } // namespace Engine

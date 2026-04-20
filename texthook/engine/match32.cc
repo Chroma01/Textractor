@@ -249,7 +249,7 @@ bool DetermineEngineByFile1()
   }
   // jichi 10/12/2013: Restore wolf engine
   // jichi 10/18/2013: Check for data/*.wolf
-  if (Util::CheckFile(L"data.wolf") || Util::CheckFile(L"data\\*.wolf") || Util::CheckFile(L"data\\basicdata\\cdatabase.dat")) {
+  if (Util::CheckFile(L"data.wolf") || Util::CheckFile(L"data\\*.wolf") || Util::CheckFile(L"data\\basicdata\\cdatabase.dat") || Util::SearchResourceString(L"WOLF RPG Editor")) {
     InsertWolfHook();
     return true;
   }

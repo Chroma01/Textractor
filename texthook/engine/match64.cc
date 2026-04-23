@@ -1868,7 +1868,9 @@ void MonoCallBack(uintptr_t assembly, void *userData) {
 		}
 		// 闇夜のPARENTE幻燐の姫将軍Remastered 体験版
 		if ( Util::CheckFile(L"PARENTE_TRIAL.exe") && Util::CheckFile(L"PARENTE_TRIAL_Data") ||
-			Util::CheckFile(L"PARENTE.exe") && Util::CheckFile(L"PARENTE_Data")) {
+			Util::CheckFile(L"PARENTE.exe") && Util::CheckFile(L"PARENTE_Data") ||
+			Util::CheckFile(L"Archives\\ver00d0.arc") ) // 你小子不讲武德，怎么正式版改名叫START.exe了
+			{
 			const BYTE bytes2_1[] = {
 				0x48, 0x89, 0x5C, 0x24, XX, 0x48, 0x89, 0x74, 0x24, XX, 0x48, 0x89, 0x54, 0x24, XX, 0x57, 0x48, 0x83, 0xEC, XX, 0x48, 0x8B, 0xF2
 			};

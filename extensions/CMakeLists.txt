@@ -12,6 +12,7 @@ FetchContent_MakeAvailable(json)
 
 # --------- Libraries ---------
 add_library(Aliyun_Translate MODULE aliyuntranslate.cpp translatewrapperaliyun.cpp network.cpp hashutils.cpp extensionimpl.cpp)
+add_library(DeepSeek_Translate MODULE deepseektranslate.cpp translatewrapperai.cpp network.cpp extensionimpl.cpp)
 add_library(Baidu_Translate MODULE baidutranslate.cpp translatewrapper.cpp network.cpp hashutils.cpp extensionimpl.cpp)
 add_library(Bing_Translate MODULE bingtranslate.cpp translatewrapper.cpp network.cpp extensionimpl.cpp)
 add_library(Bing_Translate2 MODULE bingtranslate2.cpp translatewrapper.cpp network.cpp extensionimpl.cpp)
@@ -49,6 +50,7 @@ add_library(Yandex_Translate MODULE yandextranslate.cpp translatewrapper.cpp net
 
 # --------- Set DLL output names (with spaces) ---------
 set_target_properties(Aliyun_Translate PROPERTIES OUTPUT_NAME "Aliyun Translate")
+set_target_properties(DeepSeek_Translate PROPERTIES OUTPUT_NAME "DeepSeek Translate")
 set_target_properties(Baidu_Translate PROPERTIES OUTPUT_NAME "Baidu Translate")
 set_target_properties(Bing_Translate PROPERTIES OUTPUT_NAME "Bing Translate")
 set_target_properties(Bing_Translate2 PROPERTIES OUTPUT_NAME "Bing Translate2")
@@ -83,6 +85,7 @@ set_target_properties(Yandex_Translate PROPERTIES OUTPUT_NAME "Yandex Translate"
 
 # --------- Precompiled headers ---------
 target_precompile_headers(Aliyun_Translate REUSE_FROM pch)
+target_precompile_headers(DeepSeek_Translate REUSE_FROM pch)
 target_precompile_headers(Baidu_Translate REUSE_FROM pch)
 target_precompile_headers(Bing_Translate REUSE_FROM pch)
 target_precompile_headers(Bing_Translate2 REUSE_FROM pch)
@@ -120,6 +123,7 @@ target_precompile_headers(Yandex_Translate REUSE_FROM pch)
 
 # --------- Link libraries ---------
 target_link_libraries(Aliyun_Translate Advapi32 Crypt32 winhttp Qt5::Widgets nlohmann_json::nlohmann_json)
+target_link_libraries(DeepSeek_Translate winhttp Qt5::Widgets nlohmann_json::nlohmann_json)
 target_link_libraries(Baidu_Translate Advapi32 Crypt32 winhttp Qt5::Widgets nlohmann_json::nlohmann_json)
 target_link_libraries(Bing_Translate winhttp Qt5::Widgets)
 target_link_libraries(Bing_Translate2 winhttp Qt5::Widgets)

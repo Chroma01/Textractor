@@ -23,7 +23,7 @@ extern const QStringList aiModels{
 };
 
 const wchar_t* AI_DEFAULT_PROVIDER = L"DeepSeek";
-const wchar_t* AI_DEFAULT_MODEL = L"deepseek-chat";
+const wchar_t* AI_DEFAULT_MODEL = L"deepseek-v4-flash";
 const wchar_t* AI_DEFAULT_API_HOST = L"api.deepseek.com";
 const wchar_t* AI_DEFAULT_API_PATH = L"/chat/completions";
 const wchar_t* AI_DEFAULT_SYSTEM_PROMPT = L"You are a professional translator. Translate faithfully and keep original line breaks. If previous-context sentences are provided, use them only for disambiguation and output only the translation of the current sentence.";

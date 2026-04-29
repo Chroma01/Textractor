@@ -83,6 +83,7 @@ bool InsertAdobeFlash10Hook();  // Adobe Flash Player 10
 bool InsertAliceHook();         // System40@AliceSoft; do not work for latest alice games
 //bool InsertAmuseCraftHook();    // AMUSE CRAFT: *.pac
 bool InsertAnimationGSHook();	// Animation Game System
+bool InsertAdventureGSHook();   // Adventure Game Studio
 bool InsertAGSHook();
 bool InsertAnex86Hook();        // Anex86: anex86.exe
 bool InsertAOSHook();           // AOS: *.aos

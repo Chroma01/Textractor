@@ -148,6 +148,11 @@ bool DetermineEngineByFile1()
     InsertAnimationGSHook();
     return true;
   }
+  if (Util::SearchResourceString(L"Adventure Game Studio") || (Util::CheckFile(L"acsetup.cfg") && Util::CheckFile(L"*.vox")))
+  {
+    InsertAdventureGSHook();
+    return true;
+  }
 	if (Util::SearchResourceString(L"HorkEye")) { // appear in copyright: Copyright (C) HorkEye, http://horkeye.com
 	  InsertHorkEyeHook();
 		return true;

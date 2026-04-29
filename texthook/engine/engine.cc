@@ -21797,6 +21797,53 @@ bool InsertAnim3Hook()
   return true;
 }
 
+bool InsertAdventureGSHook(){
+  // _displayspeech/display_speech
+
+  // 4.0.0.27
+  // 3.6.3.9
+  // 3.6.2.18
+  // 这几个都没测，手头上没有使用这些版本的游戏
+  // 53 8B DC 83 EC ?? 83 E4 ?? 83 C4 ?? 55 8B 6B ?? 89 6C 24 ?? 8B EC 6A ?? 68 ?? ?? ?? ?? 64 A1 ?? ?? ?? ?? 50 53 81 EC ?? ?? ?? ?? 56 57 A1 ?? ?? ?? ?? 33 C5 50 8D 45 ?? 64 A3 ?? ?? ?? ?? 8B C2 89 45 ?? 8B
+  const BYTE bytes0[] = {
+    0x53,0x8B,0xDC,0x83,0xEC,XX,0x83,0xE4,XX,0x83,0xC4,XX,0x55,0x8B,0x6B,XX,0x89,0x6C,0x24,XX,0x8B,0xEC,0x6A,XX,0x68,XX4,0x64,0xA1,XX4,0x50,0x53,0x81,0xEC,XX4,0x56,0x57,0xA1,XX4,0x33,0xC5,0x50,0x8D,0x45,XX,0x64,0xA3,XX4,0x8B,0xC2,0x89,0x45,XX,0x8B
+  };
+
+  // 3.6.1.35
+  // 3.6.0.58
+  // 3.6.0.50 Tested: Technobabylon
+  // 3.5.1.27
+  // 55 8B EC 6A ?? 68 ?? ?? ?? ?? 64 A1 ?? ?? ?? ?? 50 81 EC ?? ?? ?? ?? 53 56 57 A1 ?? ?? ?? ?? 33 C5 50 8D 45 ?? 64 A3 ?? ?? ?? ?? 8B C2 89 45 ?? 8B F1 89 75
+  const BYTE bytes1[] = {
+    0x55,0x8B,0xEC,0x6A,XX,0x68,XX4,0x64,0xA1,XX4,0x50,0x81,0xEC,XX4,0x53,0x56,0x57,0xA1,XX4,0x33,0xC5,0x50,0x8D,0x45,XX,0x64,0xA3,XX4,0x8B,0xC2,0x89,0x45,XX,0x8B,0xF1,0x89,0x75
+  };
+
+  ULONG range = min(processStopAddress - processStartAddress, MAX_REL_ADDR);
+  ULONG addr = MemDbg::findBytes(bytes0, sizeof(bytes0), processStartAddress, processStartAddress + range);
+  if (!addr) {
+    addr = MemDbg::findBytes(bytes1, sizeof(bytes1), processStartAddress, processStartAddress + range);
+    if (!addr) {
+      ConsoleOutput("Textractor:Adventure Game Studio: pattern not found");
+      return false;
+    }
+  }
+  HookParam hp = {};
+  hp.offset = pusha_ecx_off - 4;
+  hp.address = addr;
+  hp.type = USING_UTF8 | USING_STRING | NO_CONTEXT;
+  hp.filter_fun = [](LPVOID data, DWORD* size, HookParam*, BYTE)
+  {
+    auto text = reinterpret_cast<LPSTR>(data);
+    auto len = reinterpret_cast<size_t*>(size);
+    static std::regex pattern(R"(&\d+\s?)");
+    RegexReplacer(text, len, pattern, "");
+    return true;
+  };
+  ConsoleOutput("Textractor: INSERT Adventure Game Studio");
+  NewHook(hp, "Adventure Game Studio");
+  return true;
+}
+
 bool InsertVALKYRIAHook()
 {
   bool flag = false;

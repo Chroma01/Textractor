@@ -238,7 +238,8 @@ public:
 		connect(apiPathEdit, &QLineEdit::textChanged, this, &Window::SaveApiPath);
 		display->addRow(AI_API_PATH, apiPathEdit);
 
-		UpdateProviderDependentUi(tlp->provider);
+		std::wstring currentProvider = tlp.Copy().provider;
+		UpdateProviderDependentUi(currentProvider);
 
 		auto promptEdit = new QLineEdit(settings.value(KEY_AI_SYSTEM_PROMPT, QString::fromWCharArray(AI_DEFAULT_SYSTEM_PROMPT)).toString(), this);
 		SaveSystemPrompt(promptEdit->text());

@@ -14,6 +14,9 @@ const char* GET_API_KEY_FROM = "https://platform.openai.com/api-keys";
 extern const QStringList aiProviders{
 	"OpenAI", // 我的试用额度过期了，所以理论支持:(
 	"OpenRouter",
+	"Tencent Cloud CN",
+	"Aliyun CN",
+	"Ollama",
 	"Custom"
 };
 
@@ -51,12 +54,18 @@ extern const std::unordered_map<std::wstring, std::wstring> codes{
 extern const std::unordered_map<std::wstring, std::wstring> providerApiHosts{
 	{{L"OpenAI"}, {L"api.openai.com"}},
 	{{L"OpenRouter"}, {L"openrouter.ai"}},
+	{{L"Tencent Cloud CN"}, {L"tokenhub.tencentmaas.com"}},
+	{{L"Aliyun CN"}, {L"dashscope.aliyuncs.com"}},
+	{{L"Ollama"}, {L"http://127.0.0.1:11434"}},
 	{{L"Custom"}, {L""}}
 };
 
 extern const std::unordered_map<std::wstring, std::wstring> providerApiPaths{
 	{{L"OpenAI"}, {L"/v1/chat/completions"}},
 	{{L"OpenRouter"}, {L"/api/v1/chat/completions"}},
+	{{L"Tencent Cloud CN"}, {L"/v1/chat/completions"}},
+	{{L"Aliyun CN"}, {L"/compatible-mode/v1/chat/completions"}},
+	{{L"Ollama"}, {L"/v1/chat/completions"}},
 	{{L"Custom"}, {L""}}
 };
 
@@ -66,11 +75,14 @@ int tokenCount = 20, rateLimitTimespan = 1000, maxSentenceSize = 2000;
 
 namespace
 {
-	constexpr wchar_t OPENROUTER_PROVIDER[] = L"OpenRouter";
 	constexpr wchar_t CUSTOM_PROVIDER[] = L"Custom";
-	constexpr wchar_t OPENROUTER_DEFAULT_MODEL[] = L"openai/gpt-4o-mini";
-	constexpr wchar_t OPENROUTER_DEFAULT_HOST[] = L"openrouter.ai";
-	constexpr wchar_t OPENROUTER_DEFAULT_PATH[] = L"/api/v1/chat/completions";
+
+	struct ParsedUrl
+	{
+		std::wstring host;
+		DWORD port;
+		bool isSecure;
+	};
 
 	std::wstring NormalizePath(std::wstring path)
 	{
@@ -80,33 +92,73 @@ namespace
 		return path;
 	}
 
-	std::wstring NormalizeHost(std::wstring host)
+	ParsedUrl ParseHostUrl(std::wstring url)
 	{
-		Trim(host);
-		if (host.empty()) return AI_DEFAULT_API_HOST;
-		if (host.rfind(L"https://", 0) == 0) host = host.substr(8);
-		if (host.rfind(L"http://", 0) == 0) host = host.substr(7);
-		if (auto pos = host.find(L'/'); pos != std::wstring::npos) host = host.substr(0, pos);
-		return host;
+		Trim(url);
+		if (url.empty()) return { AI_DEFAULT_API_HOST, INTERNET_DEFAULT_HTTPS_PORT, true };
+
+		bool isSecure = true;
+
+		// 检查并移除协议前缀
+		if (url.rfind(L"https://", 0) == 0)
+		{
+			url = url.substr(8);
+			isSecure = true;
+		}
+		else if (url.rfind(L"http://", 0) == 0)
+		{
+			url = url.substr(7);
+			isSecure = false;
+		}
+
+		// 移除路径部分
+		if (auto pos = url.find(L'/'); pos != std::wstring::npos)
+			url = url.substr(0, pos);
+
+		// 提取端口
+		DWORD port = isSecure ? INTERNET_DEFAULT_HTTPS_PORT : INTERNET_DEFAULT_HTTP_PORT;
+		if (auto pos = url.find(L':'); pos != std::wstring::npos)
+		{
+			try
+			{
+				port = std::stoul(url.substr(pos + 1));
+				url = url.substr(0, pos);
+			}
+			catch (...) {}
+		}
+
+		if (url.empty()) url = AI_DEFAULT_API_HOST;
+
+		return { url, port, isSecure };
 	}
 
 	void ApplyProviderDefaults(TranslationParam& tlp)
 	{
 		if (tlp.provider.empty()) tlp.provider = AI_DEFAULT_PROVIDER;
 
-		if (tlp.provider == OPENROUTER_PROVIDER)
-		{
-			if (tlp.model.empty() || tlp.model == AI_DEFAULT_MODEL) tlp.model = OPENROUTER_DEFAULT_MODEL;
-			if (tlp.apiHost.empty() || tlp.apiHost == AI_DEFAULT_API_HOST) tlp.apiHost = OPENROUTER_DEFAULT_HOST;
-			if (tlp.apiPath.empty() || tlp.apiPath == AI_DEFAULT_API_PATH) tlp.apiPath = OPENROUTER_DEFAULT_PATH;
-			return;
-		}
-
 		if (tlp.provider == CUSTOM_PROVIDER) return;
 
+		if (auto it = providerApiHosts.find(tlp.provider); it != providerApiHosts.end())
+		{
+			if (!it->second.empty() && tlp.apiHost.empty())
+				tlp.apiHost = it->second;
+		}
+		else if (tlp.apiHost.empty())
+		{
+			tlp.apiHost = AI_DEFAULT_API_HOST;
+		}
+
+		if (auto it = providerApiPaths.find(tlp.provider); it != providerApiPaths.end())
+		{
+			if (!it->second.empty() && tlp.apiPath.empty())
+				tlp.apiPath = it->second;
+		}
+		else if (tlp.apiPath.empty())
+		{
+			tlp.apiPath = AI_DEFAULT_API_PATH;
+		}
+
 		if (tlp.model.empty()) tlp.model = AI_DEFAULT_MODEL;
-		if (tlp.apiHost.empty()) tlp.apiHost = AI_DEFAULT_API_HOST;
-		if (tlp.apiPath.empty()) tlp.apiPath = AI_DEFAULT_API_PATH;
 	}
 
 	std::string BuildUserPrompt(const std::wstring& text, const TranslationParam& tlp)
@@ -136,7 +188,8 @@ std::pair<bool, std::wstring> Translate(const std::wstring& text, TranslationPar
 
 	ApplyProviderDefaults(tlp);
 	if (tlp.systemPrompt.empty()) tlp.systemPrompt = AI_DEFAULT_SYSTEM_PROMPT;
-	tlp.apiHost = NormalizeHost(tlp.apiHost);
+
+	auto parsedUrl = ParseHostUrl(tlp.apiHost);
 	tlp.apiPath = NormalizePath(tlp.apiPath);
 
 	json requestBody{
@@ -148,16 +201,20 @@ std::pair<bool, std::wstring> Translate(const std::wstring& text, TranslationPar
 		})}
 	};
 
+	DWORD requestFlags = WINHTTP_FLAG_ESCAPE_DISABLE;
+	if (parsedUrl.isSecure)
+		requestFlags |= WINHTTP_FLAG_SECURE;
+
 	HttpRequest httpRequest{
 		L"Mozilla/5.0 Textractor",
-		tlp.apiHost.c_str(),
+		parsedUrl.host.c_str(),
 		L"POST",
 		tlp.apiPath.c_str(),
 		requestBody.dump(),
 		FormatString(L"Content-Type: application/json\r\nAuthorization: Bearer %s", tlp.authKey).c_str(),
-		INTERNET_DEFAULT_HTTPS_PORT,
+		parsedUrl.port,
 		nullptr,
-		WINHTTP_FLAG_SECURE | WINHTTP_FLAG_ESCAPE_DISABLE
+		requestFlags
 	};
 
 	if (httpRequest)

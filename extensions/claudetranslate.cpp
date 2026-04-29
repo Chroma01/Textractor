@@ -26,7 +26,7 @@ const wchar_t* AI_DEFAULT_PROVIDER = L"Claude";
 const wchar_t* AI_DEFAULT_MODEL = L"claude-opus-4-7"; // 这翻译成本是不是太高了
 const wchar_t* AI_DEFAULT_API_HOST = L"api.anthropic.com";
 const wchar_t* AI_DEFAULT_API_PATH = L"/v1/messages";
-const wchar_t* AI_DEFAULT_SYSTEM_PROMPT = L"You are a professional translator. Translate faithfully and keep original line breaks. If previous-context sentences are provided, use them only for disambiguation and output only the translation of the current sentence.";
+const wchar_t* AI_DEFAULT_SYSTEM_PROMPT = L"You are a professional translator. Translate faithfully and keep original line breaks. If previous-context sentences are provided, use them only for disambiguation and output only the translation of the current paragraphs.";
 extern const double AI_DEFAULT_TEMPERATURE = 0.3;
 
 extern const QStringList languagesTo{
@@ -94,9 +94,9 @@ namespace
 	{
 		std::wstring prompt;
 		if (tlp.translateFrom == L"?")
-			prompt = FormatString(L"Translate the CURRENT sentence to %s. Return only the translated CURRENT sentence.", tlp.translateTo);
+			prompt = FormatString(L"Translate the CURRENT paragraphs to %s. Return only the translated CURRENT paragraphs.", tlp.translateTo);
 		else
-			prompt = FormatString(L"Translate the CURRENT sentence from %s to %s. Return only the translated CURRENT sentence.", tlp.translateFrom, tlp.translateTo);
+			prompt = FormatString(L"Translate the CURRENT paragraphs from %s to %s. Return only the translated CURRENT paragraphs.", tlp.translateFrom, tlp.translateTo);
 
 		if (tlp.includePreviousContext)
 		{

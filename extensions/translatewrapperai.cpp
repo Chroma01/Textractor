@@ -37,6 +37,8 @@ extern const char* TRANSLATION_PROVIDER;
 extern const char* GET_API_KEY_FROM;
 extern const QStringList languagesTo, languagesFrom;
 extern const QStringList aiProviders, aiModels;
+extern const std::unordered_map<std::wstring, std::wstring> providerApiHosts;
+extern const std::unordered_map<std::wstring, std::wstring> providerApiPaths;
 extern const wchar_t* AI_DEFAULT_PROVIDER;
 extern const wchar_t* AI_DEFAULT_MODEL;
 extern const wchar_t* AI_DEFAULT_API_HOST;
@@ -206,7 +208,7 @@ public:
 			SaveCustomTranslateFrom(customFromEdit->text());
 		});
 
-		auto providerCombo = new QComboBox(this);
+		providerCombo = new QComboBox(this);
 		providerCombo->addItems(aiProviders);
 		i = providerCombo->findText(settings.value(KEY_AI_PROVIDER, QString::fromWCharArray(AI_DEFAULT_PROVIDER)).toString());
 		if (i < 0) i = providerCombo->findText(QString::fromWCharArray(AI_DEFAULT_PROVIDER));
@@ -216,7 +218,7 @@ public:
 		display->addRow(AI_PROVIDER, providerCombo);
 		connect(providerCombo, &QComboBox::currentTextChanged, this, &Window::SaveProvider);
 
-		auto modelCombo = new QComboBox(this);
+		modelCombo = new QComboBox(this);
 		modelCombo->setEditable(true);
 		modelCombo->addItems(aiModels);
 		i = modelCombo->findText(settings.value(KEY_AI_MODEL, QString::fromWCharArray(AI_DEFAULT_MODEL)).toString());
@@ -226,15 +228,17 @@ public:
 		display->addRow(AI_MODEL, modelCombo);
 		connect(modelCombo, &QComboBox::currentTextChanged, this, &Window::SaveModel);
 
-		auto hostEdit = new QLineEdit(settings.value(KEY_AI_API_HOST, QString::fromWCharArray(AI_DEFAULT_API_HOST)).toString(), this);
-		SaveApiHost(hostEdit->text());
-		connect(hostEdit, &QLineEdit::textChanged, this, &Window::SaveApiHost);
-		display->addRow(AI_API_HOST, hostEdit);
+		apiHostEdit = new QLineEdit(settings.value(KEY_AI_API_HOST, QString::fromWCharArray(AI_DEFAULT_API_HOST)).toString(), this);
+		SaveApiHost(apiHostEdit->text());
+		connect(apiHostEdit, &QLineEdit::textChanged, this, &Window::SaveApiHost);
+		display->addRow(AI_API_HOST, apiHostEdit);
 
-		auto pathEdit = new QLineEdit(settings.value(KEY_AI_API_PATH, QString::fromWCharArray(AI_DEFAULT_API_PATH)).toString(), this);
-		SaveApiPath(pathEdit->text());
-		connect(pathEdit, &QLineEdit::textChanged, this, &Window::SaveApiPath);
-		display->addRow(AI_API_PATH, pathEdit);
+		apiPathEdit = new QLineEdit(settings.value(KEY_AI_API_PATH, QString::fromWCharArray(AI_DEFAULT_API_PATH)).toString(), this);
+		SaveApiPath(apiPathEdit->text());
+		connect(apiPathEdit, &QLineEdit::textChanged, this, &Window::SaveApiPath);
+		display->addRow(AI_API_PATH, apiPathEdit);
+
+		UpdateProviderDependentUi(tlp->provider);
 
 		auto promptEdit = new QLineEdit(settings.value(KEY_AI_SYSTEM_PROMPT, QString::fromWCharArray(AI_DEFAULT_SYSTEM_PROMPT)).toString(), this);
 		SaveSystemPrompt(promptEdit->text());
@@ -303,6 +307,10 @@ public:
 private:
 	QLineEdit* customToEdit   = nullptr;
 	QLineEdit* customFromEdit = nullptr;
+	QComboBox* providerCombo = nullptr;
+	QComboBox* modelCombo = nullptr;
+	QLineEdit* apiHostEdit = nullptr;
+	QLineEdit* apiPathEdit = nullptr;
 
 	// Toggle the visibility of a custom-language row in the form layout
 	void SetCustomRowVisible(QLineEdit* edit, bool visible)
@@ -311,6 +319,24 @@ private:
 		edit->setVisible(visible);
 		if (auto* lbl = display->labelForField(edit))
 			lbl->setVisible(visible);
+	}
+
+	void UpdateProviderDependentUi(const std::wstring& provider)
+	{
+		const bool editable = true;
+		if (apiHostEdit) apiHostEdit->setReadOnly(!editable);
+		if (apiPathEdit) apiPathEdit->setReadOnly(!editable);
+
+		if (auto hostIt = providerApiHosts.find(provider); hostIt != providerApiHosts.end() && !hostIt->second.empty())
+		{
+			if (apiHostEdit) apiHostEdit->setText(S(hostIt->second));
+			else tlp->apiHost = hostIt->second;
+		}
+		if (auto pathIt = providerApiPaths.find(provider); pathIt != providerApiPaths.end() && !pathIt->second.empty())
+		{
+			if (apiPathEdit) apiPathEdit->setText(S(pathIt->second));
+			else tlp->apiPath = pathIt->second;
+		}
 	}
 
 	void SaveTranslateTo(QString language)
@@ -371,13 +397,16 @@ private:
 	}
 	void SaveProvider(QString provider)
 	{
+		const std::wstring providerW = S(provider);
 		if (initializingWindow)
 		{
-			settings.setValue(KEY_AI_PROVIDER, S(tlp->provider = S(provider)));
+			settings.setValue(KEY_AI_PROVIDER, S(tlp->provider = providerW));
+			UpdateProviderDependentUi(providerW);
 			return;
 		}
 		SaveCache();
-		settings.setValue(KEY_AI_PROVIDER, S(tlp->provider = S(provider)));
+		settings.setValue(KEY_AI_PROVIDER, S(tlp->provider = providerW));
+		UpdateProviderDependentUi(providerW);
 		LoadCache();
 	}
 	void SaveModel(QString model)
@@ -407,7 +436,15 @@ private:
 	{
 		settings.setValue(KEY_AI_TEMPERATURE, tlp->temperature = temperature);
 	}
-} window;
+};
+
+Window& GetWindow()
+{
+	static Window window;
+	return window;
+}
+
+static Window& window = GetWindow();
 
 std::vector<std::wstring> splitWString(const std::wstring& sentence, const std::wstring& delimiter) {
 	std::vector<std::wstring> result;
@@ -500,5 +537,4 @@ TEST(
 		assert(codes.count(L"?"));
 	}
 );
-
 

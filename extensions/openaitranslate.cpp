@@ -8,29 +8,28 @@ using json = nlohmann::json;
 extern const wchar_t* TRANSLATION_ERROR;
 extern const wchar_t* TRANSLATION_JSON_PARSE_ERROR;
 
-const char* TRANSLATION_PROVIDER = "DeepSeek AI Translate";
-const char* GET_API_KEY_FROM = "https://platform.deepseek.com/api_keys";
+const char* TRANSLATION_PROVIDER = "OpenAI AI Translate";
+const char* GET_API_KEY_FROM = "https://platform.openai.com/api-keys";
 
 extern const QStringList aiProviders{
-	"DeepSeek"
+	"OpenAI", // 我的试用额度过期了，所以理论支持:(
+	"OpenRouter",
+	"Custom"
 };
 
 extern const QStringList aiModels{
-	"deepseek-v4-flash",
-	"deepseek-v4-pro",
-	"deepseek-chat",
-	"deepseek-reasoner"
+	"gpt-5.4-mini",
+	// 自己填
 };
 
-const wchar_t* AI_DEFAULT_PROVIDER = L"DeepSeek";
-const wchar_t* AI_DEFAULT_MODEL = L"deepseek-v4-flash";
-const wchar_t* AI_DEFAULT_API_HOST = L"api.deepseek.com";
-const wchar_t* AI_DEFAULT_API_PATH = L"/chat/completions";
+const wchar_t* AI_DEFAULT_PROVIDER = L"OpenAI";
+const wchar_t* AI_DEFAULT_MODEL = L"gpt-5.4-mini";
+const wchar_t* AI_DEFAULT_API_HOST = L"api.openai.com";
+const wchar_t* AI_DEFAULT_API_PATH = L"/v1/chat/completions";
 const wchar_t* AI_DEFAULT_SYSTEM_PROMPT = L"You are a professional translator. Translate faithfully and keep original line breaks. If previous-context sentences are provided, use them only for disambiguation and output only the translation of the current sentence.";
 extern const double AI_DEFAULT_TEMPERATURE = 0.3;
 
-extern const QStringList languagesTo
-{
+extern const QStringList languagesTo{
 	"Simplified Chinese",
 	"Traditional Chinese",
 	"English",
@@ -39,8 +38,7 @@ extern const QStringList languagesTo
 	"Custom..."
 }, languagesFrom = languagesTo;
 
-extern const std::unordered_map<std::wstring, std::wstring> codes
-{
+extern const std::unordered_map<std::wstring, std::wstring> codes{
 	{{L"Simplified Chinese"}, {L"zh"}},
 	{{L"Traditional Chinese"}, {L"zh-tw"}},
 	{{L"English"}, {L"en"}},
@@ -51,11 +49,15 @@ extern const std::unordered_map<std::wstring, std::wstring> codes
 };
 
 extern const std::unordered_map<std::wstring, std::wstring> providerApiHosts{
-	{{L"DeepSeek"}, {L"api.deepseek.com"}}
+	{{L"OpenAI"}, {L"api.openai.com"}},
+	{{L"OpenRouter"}, {L"openrouter.ai"}},
+	{{L"Custom"}, {L""}}
 };
 
 extern const std::unordered_map<std::wstring, std::wstring> providerApiPaths{
-	{{L"DeepSeek"}, {L"/chat/completions"}}
+	{{L"OpenAI"}, {L"/v1/chat/completions"}},
+	{{L"OpenRouter"}, {L"/api/v1/chat/completions"}},
+	{{L"Custom"}, {L""}}
 };
 
 bool translateSelectedOnly = true, useRateLimiter = true, rateLimitSelected = false, useCache = true, useFilter = true;
@@ -64,6 +66,12 @@ int tokenCount = 20, rateLimitTimespan = 1000, maxSentenceSize = 2000;
 
 namespace
 {
+	constexpr wchar_t OPENROUTER_PROVIDER[] = L"OpenRouter";
+	constexpr wchar_t CUSTOM_PROVIDER[] = L"Custom";
+	constexpr wchar_t OPENROUTER_DEFAULT_MODEL[] = L"openai/gpt-4o-mini";
+	constexpr wchar_t OPENROUTER_DEFAULT_HOST[] = L"openrouter.ai";
+	constexpr wchar_t OPENROUTER_DEFAULT_PATH[] = L"/api/v1/chat/completions";
+
 	std::wstring NormalizePath(std::wstring path)
 	{
 		Trim(path);
@@ -80,6 +88,25 @@ namespace
 		if (host.rfind(L"http://", 0) == 0) host = host.substr(7);
 		if (auto pos = host.find(L'/'); pos != std::wstring::npos) host = host.substr(0, pos);
 		return host;
+	}
+
+	void ApplyProviderDefaults(TranslationParam& tlp)
+	{
+		if (tlp.provider.empty()) tlp.provider = AI_DEFAULT_PROVIDER;
+
+		if (tlp.provider == OPENROUTER_PROVIDER)
+		{
+			if (tlp.model.empty() || tlp.model == AI_DEFAULT_MODEL) tlp.model = OPENROUTER_DEFAULT_MODEL;
+			if (tlp.apiHost.empty() || tlp.apiHost == AI_DEFAULT_API_HOST) tlp.apiHost = OPENROUTER_DEFAULT_HOST;
+			if (tlp.apiPath.empty() || tlp.apiPath == AI_DEFAULT_API_PATH) tlp.apiPath = OPENROUTER_DEFAULT_PATH;
+			return;
+		}
+
+		if (tlp.provider == CUSTOM_PROVIDER) return;
+
+		if (tlp.model.empty()) tlp.model = AI_DEFAULT_MODEL;
+		if (tlp.apiHost.empty()) tlp.apiHost = AI_DEFAULT_API_HOST;
+		if (tlp.apiPath.empty()) tlp.apiPath = AI_DEFAULT_API_PATH;
 	}
 
 	std::string BuildUserPrompt(const std::wstring& text, const TranslationParam& tlp)
@@ -107,7 +134,7 @@ std::pair<bool, std::wstring> Translate(const std::wstring& text, TranslationPar
 	if (tlp.authKey.empty())
 		return { false, FormatString(L"%s, API key is required.", TRANSLATION_ERROR) };
 
-	if (tlp.model.empty()) tlp.model = AI_DEFAULT_MODEL;
+	ApplyProviderDefaults(tlp);
 	if (tlp.systemPrompt.empty()) tlp.systemPrompt = AI_DEFAULT_SYSTEM_PROMPT;
 	tlp.apiHost = NormalizeHost(tlp.apiHost);
 	tlp.apiPath = NormalizePath(tlp.apiPath);
@@ -133,34 +160,38 @@ std::pair<bool, std::wstring> Translate(const std::wstring& text, TranslationPar
 		WINHTTP_FLAG_SECURE | WINHTTP_FLAG_ESCAPE_DISABLE
 	};
 
-	if (httpRequest) {
-		try {
+	if (httpRequest)
+	{
+		try
+		{
 			auto parsed = json::parse(WideStringToString(httpRequest.response));
 
-			if (parsed.contains("error") && parsed["error"].is_object()) {
+			if (parsed.contains("error") && parsed["error"].is_object())
+			{
 				std::string errorMessage = "unknown error";
 				if (parsed["error"].contains("message") && parsed["error"]["message"].is_string())
 					errorMessage = parsed["error"]["message"].get<std::string>();
 				return { false, FormatString(L"%s: %s", TRANSLATION_ERROR, StringToWideString(errorMessage)) };
 			}
 
-			if (parsed.contains("choices") && parsed["choices"].is_array() && !parsed["choices"].empty()) {
+			if (parsed.contains("choices") && parsed["choices"].is_array() && !parsed["choices"].empty())
+			{
 				auto& choice = parsed["choices"][0];
 				if (choice.contains("message") && choice["message"].is_object() &&
-					choice["message"].contains("content") && choice["message"]["content"].is_string()) {
+					choice["message"].contains("content") && choice["message"]["content"].is_string())
+				{
 					return { true, StringToWideString(choice["message"]["content"].get<std::string>()) };
 				}
 			}
 
 			return { false, FormatString(L"%s: %s", TRANSLATION_ERROR, httpRequest.response) };
 		}
-		catch (const json::exception& e) {
+		catch (const json::exception& e)
+		{
 			return { false, FormatString(L"%s: %s", TRANSLATION_JSON_PARSE_ERROR, StringToWideString(e.what())) };
 		}
 	}
 
 	return { false, FormatString(L"%s (code=%u)", TRANSLATION_ERROR, httpRequest.errorCode) };
 }
-
-
 

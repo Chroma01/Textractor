@@ -332,6 +332,15 @@ const wchar_t* BING_TOKEN_RESPONSE_EMPTY = L"token response is empty";
 const wchar_t* BING_COULD_NOT_ACQUIRE_TOKEN = L"could not acquire token";
 const wchar_t* BING_TOKEN_NOT_FOUND = L"token not found";
 const wchar_t* BAIDU_MD5_SIGNATURE_FAILED = L"MD5 signature generation failed.";
+const char* INCLUDE_PREVIOUS_CONTEXT = u8"Include previous sentences as context";
+const char* AI_TEMPERATURE = u8"AI Temperature";
+const char* AI_SYSTEM_PROMPT = u8"AI system prompt";
+const char* AI_API_PATH = u8"AI API path";
+const char* AI_API_HOST = u8"AI API host";
+const char* AI_MODEL = u8"AI model";
+const char* AI_PROVIDER = u8"AI provider";
+const char* CUSTOM_TRANSLATE_TO = u8"Custom translate to";
+const char* CUSTOM_TRANSLATE_FROM = u8"Custom translate from";
 
 void Localize()
 {

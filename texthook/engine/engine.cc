@@ -1820,13 +1820,25 @@ textrender.dll+BE5F - C3                    - ret
   };
   enum { addr_offset = -0x0B };  // 8B 4C 24 2C   - mov ecx,[esp+2C]  << hook here
 
+  // https://vndb.org/v56343
+  // 8D 45 ? 50 8D 45 ? 50 8D 4D ? E8 ? ? ? ? 8B 4D ? 50 8B 45
+  const BYTE pattern1[] = {
+    0x8D, 0x45, XX, 0x50, 0x8D, 0x45, XX, 0x50, 0x8D, 0x4D, XX, 0xE8, XX4, 0x8B, 0x4D, XX, 0x50, 0x8B, 0x45
+  };
+  bool flag = false;
+
   ULONG addr = MemDbg::findBytes(pattern, sizeof(pattern), (DWORD)module, Util::QueryModuleLimits(module).second);
   if (!addr) {
-    ConsoleOutput("vnreng:KiriKiriZ_msvc: pattern not found");
-    return false;
+    addr = MemDbg::findBytes(pattern1, sizeof(pattern1), (DWORD)module, Util::QueryModuleLimits(module).second);
+    if (!addr) {
+      ConsoleOutput("vnreng:KiriKiriZ_msvc: pattern not found");
+      return false;
+    }
+    flag = true;
   }
   HookParam hp = {};
   hp.address = addr + addr_offset;
+  if(flag) hp.address = addr + 0x10;
   hp.offset = pusha_eax_off - 4;
   hp.type = USING_UNICODE | USING_STRING;
   hp.filter_fun = KiriKiriZ_msvcFilter;

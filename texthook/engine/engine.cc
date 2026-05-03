@@ -1847,6 +1847,32 @@ textrender.dll+BE5F - C3                    - ret
   return true;
 }
 
+bool InsertKiriKiriZHook_msvc2() {
+  auto module = GetModuleHandleW(L"textrender.dll");
+  if (!module)
+    return false;
+
+  // https://vndb.org/v56343
+  // 55 8B EC 6A ?? 68 ?? ?? ?? ?? 64 A1 ?? ?? ?? ?? 50 81 EC ?? ?? ?? ?? A1 ?? ?? ?? ?? 33 C5 89 45 ?? 56
+  const BYTE pattern[] = {
+    0x55, 0x8B, 0xEC, 0x6A, XX, 0x68, XX4, 0x64, 0xA1, XX4, 0x50, 0x81, 0xEC, XX4, 0xA1, XX4, 0x33, 0xC5, 0x89, 0x45, XX, 0x56
+  };
+
+  ULONG addr = MemDbg::findBytes(pattern, sizeof(pattern), (DWORD)module, Util::QueryModuleLimits(module).second);
+  if (!addr) {
+    ConsoleOutput("Textractor:KiriKiriZ_msvc2: pattern not found");
+    return false;
+  }
+  HookParam hp = {};
+  hp.address = addr;
+  hp.offset = 0x4;
+  hp.type = USING_UNICODE | NO_CONTEXT;
+  hp.length_offset = 1;
+  ConsoleOutput("Textractor: INSERT KiriKiriZ_msvc2");
+  NewHook(hp, "KiriKiriZ_msvc2");
+  return true;
+}
+
 bool KiriKiriZ5Filter(LPVOID data, DWORD *size, HookParam *, BYTE)
 {
   auto text = reinterpret_cast<LPWSTR>(data);
@@ -2011,6 +2037,7 @@ bool flag = false;
 bool InsertKiriKiriZHook()
 {
   bool ok = InsertKiriKiriZHook_msvc();
+  ok = InsertKiriKiriZHook_msvc2() || ok;
   ok = InsertKiriKiriZHook3() || ok;
   ok = InsertKiriKiriZHook4() || ok;
   ok = InsertKiriKiriZHook5() || ok;

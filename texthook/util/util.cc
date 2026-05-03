@@ -7,6 +7,7 @@
 #include "ithsys/ithsys.h"
 #include "main.h"
 #include <Psapi.h>
+#include <cstring>
 
 namespace { // unnamed
 
@@ -281,6 +282,9 @@ DWORD FindImportEntry(DWORD hModule, DWORD fun)
 // Search string in rsrc section. This section usually contains version and copyright info.
 bool SearchResourceString(LPCWSTR str)
 {
+    if (!str || !*str)
+        return false;
+
     uintptr_t hModule = (uintptr_t)GetModuleHandleW(nullptr);
 
     IMAGE_DOS_HEADER *DosHdr = (IMAGE_DOS_HEADER *)hModule;
@@ -289,23 +293,68 @@ bool SearchResourceString(LPCWSTR str)
     if (IMAGE_DOS_SIGNATURE == DosHdr->e_magic) {
         NtHdr = (IMAGE_NT_HEADERS *)(hModule + DosHdr->e_lfanew);
         if (IMAGE_NT_SIGNATURE == NtHdr->Signature) {
-            uintptr_t rsrc = NtHdr->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_RESOURCE].VirtualAddress;
+            auto resourceRva = NtHdr->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_RESOURCE].VirtualAddress;
+            auto resourceSize = NtHdr->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_RESOURCE].Size;
+            uintptr_t needleSize = wcslen(str) * sizeof(wchar_t);
 
-            if (rsrc) {
-                rsrc += hModule;
+            if (resourceRva && resourceSize >= needleSize && needleSize) {
+                uintptr_t rsrc = hModule + resourceRva;
+                uintptr_t rsrcEnd = rsrc + resourceSize;
+                if (rsrcEnd < rsrc)
+                    return false;
 
 #ifdef _WIN64
-                uintptr_t rsrcBase = 0;
-                size_t size = 0;
-                if (IthGetMemoryRange64((LPVOID)rsrc, &rsrcBase, &size) &&
-                    SearchPattern64(rsrcBase, size - 4, str, wcslen(str) << 1))
-                    return true;
+                for (uintptr_t cursor = rsrc; cursor < rsrcEnd; ) {
+                    uintptr_t regionBase = 0;
+                    size_t regionSize = 0;
+                    if (!IthGetMemoryRange64((LPVOID)cursor, &regionBase, &regionSize) || !regionSize)
+                        break;
+                    uintptr_t regionEnd = regionBase + regionSize;
+                    if (regionEnd <= cursor)
+                        break;
+
+                    uintptr_t scanEnd = regionEnd < rsrcEnd ? regionEnd : rsrcEnd;
+                    uintptr_t scanSize = scanEnd - cursor;
+                    if (scanSize >= needleSize) {
+                        bool matched = false;
+                        __try {
+                            matched = memcmp((LPCVOID)cursor, str, needleSize) == 0 ||
+                                SearchPattern64(cursor, scanSize, str, needleSize);
+                        }
+                        __except (EXCEPTION_EXECUTE_HANDLER) {
+                            matched = false;
+                        }
+                        if (matched)
+                            return true;
+                    }
+                    cursor = scanEnd;
+                }
 #else
-                DWORD rsrcBase = (DWORD)rsrc;
-                DWORD size = 0;
-                if (IthGetMemoryRange((LPVOID)rsrc, &rsrcBase, &size) &&
-                    SearchPattern(rsrcBase, size - 4, str, wcslen(str) << 1))
-                    return true;
+                for (DWORD cursor = (DWORD)rsrc, rsrcEnd32 = (DWORD)rsrcEnd; cursor < rsrcEnd32; ) {
+                    DWORD regionBase = 0;
+                    DWORD regionSize = 0;
+                    if (!IthGetMemoryRange((LPVOID)cursor, &regionBase, &regionSize) || !regionSize)
+                        break;
+                    DWORD regionEnd = regionBase + regionSize;
+                    if (regionEnd <= cursor)
+                        break;
+
+                    DWORD scanEnd = regionEnd < rsrcEnd32 ? regionEnd : rsrcEnd32;
+                    DWORD scanSize = scanEnd - cursor;
+                    if (scanSize >= needleSize) {
+                        bool matched = false;
+                        __try {
+                            matched = memcmp((LPCVOID)cursor, str, needleSize) == 0 ||
+                                SearchPattern(cursor, scanSize, str, (DWORD)needleSize);
+                        }
+                        __except (EXCEPTION_EXECUTE_HANDLER) {
+                            matched = false;
+                        }
+                        if (matched)
+                            return true;
+                    }
+                    cursor = scanEnd;
+                }
 #endif
             }
         }

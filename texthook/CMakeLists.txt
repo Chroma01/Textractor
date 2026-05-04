@@ -1,3 +1,15 @@
+cmake_minimum_required(VERSION 3.14)
+include(FetchContent)
+FetchContent_Declare(
+		boost_regex
+		GIT_REPOSITORY https://github.com/boostorg/regex.git
+		GIT_TAG        boost-1.91.0
+)
+
+set(BOOST_REGEX_STANDALONE ON CACHE BOOL "" FORCE)
+
+FetchContent_MakeAvailable(boost_regex)
+
 include_directories(. util minhook/include)
 
 if(${CMAKE_SIZEOF_VOID_P} EQUAL 8)
@@ -48,4 +60,4 @@ if(NOT CMAKE_BUILD_TYPE MATCHES Debug)
 	target_compile_options(texthook PRIVATE /MT)
 	target_link_options(texthook PRIVATE /NODEFAULTLIB:MSVCRT)
 endif()
-target_link_libraries(texthook minhook)
+target_link_libraries(texthook minhook Boost::regex)

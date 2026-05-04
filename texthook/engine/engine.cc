@@ -28,6 +28,7 @@
 #include <cstdio>
 #include <string>
 #include <sstream>
+#include <boost/regex.hpp>
 
 // jichi 375/2014: Add offset of pusha/pushad
 // http://faydoc.tripod.com/cpu/pushad.htm
@@ -1674,16 +1675,24 @@ bool KiriKiriZ4Filter(LPVOID data, DWORD *size, HookParam *, BYTE)
 bool KiriKiriZ4FilterAsaSP(LPVOID data, DWORD *size, HookParam *, BYTE)
 {
   auto text = reinterpret_cast<LPWSTR>(data);
-  auto len = reinterpret_cast<size_t *>(size);
+  DWORD &len = *size;
 
   if (text[0] == L' ' || text[0] == L':' || text[0] == L'@' || text[0] == L']')
 	return false;
 
-  if (cpp_wcsnstr(text, L"[", *len/sizeof(wchar_t))) {
-    WideStringCharReplacer(text, len, L"[r]", 3, L' ');
-    WideStringFilterBetween(text, len, L"[", 1, L"]", 1);
-  }
+  std::wstring s(text, len / sizeof(wchar_t));
 
+  static const boost::wregex eruby_reg(L"\\[eruby\\s+str=\"([^\"]+)\"[^\\]]*\\]");
+  s = boost::regex_replace(s, eruby_reg, L"$1");
+
+  static const boost::wregex normal_reg(L"\\[r\\]|\\[CR\\]");
+  s = boost::regex_replace(s,normal_reg, L" ");
+
+  static const boost::wregex recursive_tag_reg(L"\\[([^\\[\\]]|(?R))*\\]");
+  s = boost::regex_replace(s, recursive_tag_reg, L"");
+
+  len = static_cast<DWORD>(s.size() * sizeof(wchar_t));
+  std::wmemcpy(text, s.c_str(), s.size() + 1);
   return len != 0;
 }
 
@@ -1715,31 +1724,53 @@ bool InsertKiriKiriZHook4()
     0xC7, 0x45, 0xF0, XX4,
     0x8B, 0x45, 0x08
   };
-  bool asaflag = false;
+
+  const BYTE genericBytes[] = {
+    0xE8, XX2, 0xFE, 0xFF,
+    0xC7, 0x45, 0xFC, XX4,
+    0xC7, 0x45, 0xF0, XX4,
+    0x8B, 0x45, 0x08
+  };
+
+  bool asaflag = false,genericflag = false;
 
   ULONG range = min(processStopAddress - processStartAddress, MAX_REL_ADDR);
   ULONG addr = MemDbg::findBytes(bytes, sizeof(bytes), processStartAddress, processStartAddress + range);
   if (!addr) {
     addr = MemDbg::findBytes(bytes1, sizeof(bytes1), processStartAddress, processStartAddress + range);
     if (!addr) {
-      ConsoleOutput("vnreng:KiriKiriZ4: pattern not found");
-      return false;
+      std::vector<MemDbg::dword_t> foundAddrs;
+      MemDbg::iterFindBytes([&](MemDbg::dword_t a) -> bool {
+        foundAddrs.push_back(a);
+        return true;
+      }, genericBytes, sizeof(genericBytes), processStartAddress, processStartAddress + range);
+      if (foundAddrs.size() == 2) {
+        addr = foundAddrs[1];
+        genericflag = true;
+        ConsoleOutput("vnreng:KiriKiriZ4: Generic pattern matched exactly 2 results. Using the 2nd.");
+      } else {
+          if (foundAddrs.size() > 2) {
+              ConsoleOutput("vnreng:KiriKiriZ4: Ambiguous match! Found %d results.", foundAddrs.size());
+          } else {
+              ConsoleOutput("vnreng:KiriKiriZ4: Pattern not found.");
+          }
+          return false;
+      }
+    } else {
+      asaflag = true;
     }
-    asaflag = true;
   }
 
   HookParam hp = {};
   hp.address = addr;
-  hp.offset = pusha_ebx_off -4;
+  hp.offset = 0x4; //pusha_ebx_off -4;
   hp.type =  NO_CONTEXT | USING_UNICODE | USING_STRING;
-  hp.filter_fun = KiriKiriZ4Filter;
+  hp.filter_fun = (asaflag || genericflag)? KiriKiriZ4FilterAsaSP : KiriKiriZ4Filter;
   if (asaflag) {
     hp.offset = pusha_edx_off -4;
-    hp.filter_fun = KiriKiriZ4FilterAsaSP;
   }
   ConsoleOutput("vnreng: INSERT KiriKiriZ4");
   NewHook(hp, "KiriKiriZ4");
-
   return true;
 }
 

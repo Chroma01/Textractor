@@ -1766,9 +1766,9 @@ bool InsertKiriKiriZHook4()
   hp.offset = 0x4; //pusha_ebx_off -4;
   hp.type =  NO_CONTEXT | USING_UNICODE | USING_STRING;
   hp.filter_fun = (asaflag || genericflag)? KiriKiriZ4FilterAsaSP : KiriKiriZ4Filter;
-  if (asaflag) {
-    hp.offset = pusha_edx_off -4;
-  }
+  // if (asaflag) {
+  //   hp.offset = pusha_edx_off -4;
+  // }
   ConsoleOutput("vnreng: INSERT KiriKiriZ4");
   NewHook(hp, "KiriKiriZ4");
   return true;

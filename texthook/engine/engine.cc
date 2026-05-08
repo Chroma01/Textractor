@@ -6782,8 +6782,60 @@ bool InsertAtelierGSHook3()
   return true;
 }
 
+bool InsertAtelierGSHook4()
+{
+  //by Chenx221
+  /*
+  * https://vndb.org/v62734
+  * https://vndb.org/v56756
+  * https://vndb.org/v43311
+  * https://vndb.org/r119233
+  * https://vndb.org/r128002
+  */
+  const BYTE bytes[] = {
+    0x8B, 0x85, XX4,
+    0x8B, 0xCB,
+    0x57,
+    XX4,
+    0xE8, XX4,    // hook here
+    0x8B, 0xB5
+  };
+
+  ULONG range = min(processStopAddress - processStartAddress, MAX_REL_ADDR);
+  ULONG addr = MemDbg::findBytes(bytes, sizeof(bytes), processStartAddress, processStartAddress + range);
+  if (!addr) {
+    ConsoleOutput("vnreng:Atelier KAGUYA GAME_SYS4: pattern not found");
+    return false;
+  }
+
+  HookParam hp = {};
+  hp.address = addr + 0xD;
+  hp.offset = pusha_edi_off -4;
+  hp.filter_fun = [](LPVOID data, DWORD *size, HookParam *, BYTE)
+  {
+    auto text = reinterpret_cast<BYTE*>(data);
+    DWORD len = *size;
+    if (text == nullptr || len == 0) return false;
+
+    for (DWORD i = 0; i < len; i++) {
+      // if (text[i] == 0) break;
+      text[i] = ~text[i];
+    }
+
+    return true;
+  };
+  hp.type = NO_CONTEXT | USING_STRING;
+  ConsoleOutput("vnreng: INSERT Atelier KAGUYA GAME_SYS4");
+  NewHook(hp, "Atelier KAGUYA GS4");
+  return true;
+}
 bool InsertAtelierGSHooks()
 {return  InsertAtelierGSHook1() || InsertAtelierGSHook2() || InsertAtelierGSHook3();}
+{
+  bool flag = InsertAtelierGSHook1() || InsertAtelierGSHook2() || InsertAtelierGSHook3();
+  flag |= InsertAtelierGSHook4();
+  return flag;
+}
 
 bool InsertAtelierADV10Hook()
 {

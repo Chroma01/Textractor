@@ -6829,11 +6829,68 @@ bool InsertAtelierGSHook4()
   NewHook(hp, "Atelier KAGUYA GS4");
   return true;
 }
+
+bool InsertAtelierGSHook5()
+{
+  //by Chenx221
+    /*
+    * https://vndb.org/v62734
+    * https://vndb.org/v56756
+    * https://vndb.org/v43311
+    */
+  const BYTE bytes[] = {
+    0x8B, 0x47, XX,
+    0x56,
+    0x39, 0x47, XX,
+    0x74, XX,
+    0x8B, 0xC8,
+    0xE8, XX4,
+    0x83, 0x47, XX2,
+    0xEB, XX,
+    0x50,
+    0x8B, 0xCF,
+    0xE8, XX4,
+    0x83, 0xC6, XX,
+    0x3B, 0xF3,
+    0x75, XX,
+    0x8B
+  };
+
+  ULONG range = min(processStopAddress - processStartAddress, MAX_REL_ADDR);
+  ULONG addr = MemDbg::findBytes(bytes, sizeof(bytes), processStartAddress, processStartAddress + range);
+  if (!addr) {
+    ConsoleOutput("vnreng:Atelier KAGUYA GAME_SYS5: pattern not found");
+    return false;
+  }
+
+  HookParam hp = {};
+  hp.address = addr;
+  hp.offset = pusha_esi_off -4;
+  hp.text_fun = [](DWORD esp_base, HookParam*, BYTE, DWORD *data, DWORD *split, DWORD* len)
+  {
+    DWORD ptr = *(DWORD*)(esp_base + pusha_esi_off -4);
+    if (!ptr) return;
+    BYTE* base = reinterpret_cast<BYTE*>(ptr);
+    DWORD current_len = *(DWORD*)(base + 0x10);
+    DWORD current_cap = *(DWORD*)(base + 0x14);
+    *len = current_len;
+    if (current_cap >= 0x10) {
+      *data = *(DWORD*)(base);
+    }else {
+      *data = (DWORD)(base);
+    }
+  };
+  hp.type = USING_STRING;
+  ConsoleOutput("vnreng: INSERT Atelier KAGUYA GAME_SYS5");
+  NewHook(hp, "Atelier KAGUYA GS5");
+  return true;
+}
+
 bool InsertAtelierGSHooks()
-{return  InsertAtelierGSHook1() || InsertAtelierGSHook2() || InsertAtelierGSHook3();}
 {
   bool flag = InsertAtelierGSHook1() || InsertAtelierGSHook2() || InsertAtelierGSHook3();
   flag |= InsertAtelierGSHook4();
+  flag |= InsertAtelierGSHook5();
   return flag;
 }
 

@@ -7087,8 +7087,28 @@ bool InsertAtelierKaguya5Hook()
   return true;
 }
 
+bool InsertAtelierKaguya6Hook()
+{
+  //by Chenx221
+  //0x40F0/0x41F0 这两不出意外应该就是姓氏和名字
+  //如果游戏支持自定义主角姓名，使用GetTextExtentPoint32A应该是更好的选择
+  HookParam hp = {};
+  hp.address = 0;
+  hp.offset = 0x4;
+  wcsncpy_s(hp.module, L"Graphics.dll", MAX_MODULE_SIZE - 1);
+  strncpy_s(hp.function, "TextInitialize", MAX_MODULE_SIZE - 1);
+  hp.type = USING_STRING | MODULE_OFFSET | FUNCTION_OFFSET;
+  ConsoleOutput("vnreng: INSERT Atelier KAGUYA6");
+  NewHook(hp, "Atelier KAGUYA6");
+  return true;
+}
+
 bool InsertAtelierHooks()
-{return  InsertAtelierHook() || InsertAtelierKaguya2Hook() || InsertAtelierKaguya3Hook() || InsertAtelierKaguya4Hook() || InsertAtelierKaguya5Hook();}
+{
+  bool flag = InsertAtelierHook() || InsertAtelierKaguya2Hook() || InsertAtelierKaguya3Hook() || InsertAtelierKaguya4Hook() || InsertAtelierKaguya5Hook();
+  flag |= InsertAtelierKaguya6Hook();
+  return flag;
+}
 
 /********************************************************************************************
 CIRCUS hook:

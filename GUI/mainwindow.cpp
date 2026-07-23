@@ -17,6 +17,8 @@
 #include <QFileDialog>
 #include <QFontDialog>
 #include <QHash>
+#include <QDesktopServices>
+#include <QUrl>
 #include "../extensions/network.h"
 
 extern const char* ATTACH;
@@ -32,6 +34,8 @@ extern const char* SEARCH_FOR_HOOKS;
 extern const char* SETTINGS;
 extern const char* EXTENSIONS;
 extern const char* FONT;
+extern const char* CLEAR_CURRENT_THREAD;
+extern const char* SEARCH_GOOGLE;
 extern const char* SELECT_PROCESS;
 extern const char* SELECT_PROCESS_INFO;
 extern const char* FROM_COMPUTER;
@@ -740,6 +744,17 @@ namespace
 	{
 		std::unique_ptr<QMenu> menu(ui.textOutput->createStandardContextMenu());
 		menu->addAction(FONT, [] { if (QString font = QFontDialog::getFont(&ok, ui.textOutput->font(), This, FONT).toString(); ok) SetOutputFont(font); });
+		menu->addAction(CLEAR_CURRENT_THREAD, [] {
+			if (current) {
+				current->storage.Acquire().contents.clear();
+				ui.textOutput->clear();
+			}
+		});
+		menu->addAction(SEARCH_GOOGLE, [] {
+			QString text = ui.textOutput->textCursor().selectedText().trimmed();
+			if (!text.isEmpty())
+				QDesktopServices::openUrl(QUrl("https://www.google.com/search?q=" + text));
+		});
 		menu->exec(ui.textOutput->mapToGlobal(point));
 	}
 
